@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getSession } from '@/lib/auth/auth';
+import { getSession } from '@/lib/auth/edge-auth';
 
 export async function middleware(request: NextRequest) {
   // Add pathname to headers for layout detection

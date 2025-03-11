@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { validateAdmin, createSession } from '@/lib/auth/auth';
 import { cookies } from 'next/headers';
 
+// Explicitly set to use Node.js runtime
+export const runtime = 'nodejs';
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();

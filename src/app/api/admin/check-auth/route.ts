@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/auth';
 
+// Explicitly set to use Node.js runtime
+export const runtime = 'nodejs';
+
 export async function GET() {
   try {
     const session = await getSession();
