@@ -1,6 +1,6 @@
 'use client';
 
-import { MapPin, Clock, Phone, Mail, ExternalLink, Navigation2 } from 'lucide-react';
+import { MapPin, Clock, Phone, ExternalLink, Navigation2 } from 'lucide-react';
 
 export const AddressSection = () => {
   return (

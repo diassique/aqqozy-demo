@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import type { Usable } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronRight, HelpCircle } from 'lucide-react';
@@ -43,8 +42,8 @@ interface Product {
 
 const BLANK_IMAGE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
-export default function ProductPage({ params }: { params: { slug: string } }) {
-  const resolvedParams = use<{ slug: string }>(params);
+export default function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
+  const resolvedParams = use(params);
   const [product, setProduct] = useState<Product | null>(null);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, ProductStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -10,16 +10,9 @@ export async function GET(
 ) {
   try {
     const params = await context.params;
-    const { id } = params;
-    if (!id) {
-      return NextResponse.json(
-        { error: 'ID is required' },
-        { status: 400 }
-      );
-    }
-
-    const productId = parseInt(id);
-    if (isNaN(productId)) {
+    const id = parseInt(params.id);
+    
+    if (isNaN(id)) {
       return NextResponse.json(
         { error: 'Invalid ID format' },
         { status: 400 }
@@ -27,7 +20,7 @@ export async function GET(
     }
 
     const product = await prisma.product.findUnique({
-      where: { id: productId },
+      where: { id },
       include: {
         category: true,
         images: {
@@ -40,7 +33,7 @@ export async function GET(
 
     if (!product) {
       return NextResponse.json(
-        { error: 'Товар не найден' },
+        { error: 'Product not found' },
         { status: 404 }
       );
     }
@@ -49,7 +42,7 @@ export async function GET(
   } catch (error) {
     console.error('Error fetching product:', error);
     return NextResponse.json(
-      { error: 'Ошибка при загрузке товара' },
+      { error: 'Error fetching product' },
       { status: 500 }
     );
   }
@@ -62,16 +55,9 @@ export async function PUT(
 ) {
   try {
     const params = await context.params;
-    const { id } = params;
-    if (!id) {
-      return NextResponse.json(
-        { error: 'ID is required' },
-        { status: 400 }
-      );
-    }
-
-    const productId = parseInt(id);
-    if (isNaN(productId)) {
+    const id = parseInt(params.id);
+    
+    if (isNaN(id)) {
       return NextResponse.json(
         { error: 'Invalid ID format' },
         { status: 400 }
@@ -107,12 +93,12 @@ export async function PUT(
 
     // First, delete existing images
     await prisma.productImage.deleteMany({
-      where: { productId },
+      where: { productId: id },
     });
 
     // Update the product with new data
     const updatedProduct = await prisma.product.update({
-      where: { id: productId },
+      where: { id },
       data: {
         name,
         description,
@@ -125,7 +111,7 @@ export async function PUT(
             order: index,
           })),
         },
-        status: status as any, // Type assertion to fix Prisma type error
+        status: status as ProductStatus, // Type assertion to fix Prisma type error
         quantity,
         isPublished,
         isFeatured,
@@ -164,16 +150,9 @@ export async function DELETE(
 ) {
   try {
     const params = await context.params;
-    const { id } = params;
-    if (!id) {
-      return NextResponse.json(
-        { error: 'ID is required' },
-        { status: 400 }
-      );
-    }
-
-    const productId = parseInt(id);
-    if (isNaN(productId)) {
+    const id = parseInt(params.id);
+    
+    if (isNaN(id)) {
       return NextResponse.json(
         { error: 'Invalid ID format' },
         { status: 400 }
@@ -182,12 +161,12 @@ export async function DELETE(
     
     // First delete all images associated with the product
     await prisma.productImage.deleteMany({
-      where: { productId },
+      where: { productId: id },
     });
 
     // Then delete the product
     await prisma.product.delete({
-      where: { id: productId },
+      where: { id },
     });
 
     return new NextResponse(null, { status: 204 });

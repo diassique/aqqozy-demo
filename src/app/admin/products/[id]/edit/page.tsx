@@ -23,31 +23,6 @@ interface ProductImage {
   productId: number;
 }
 
-interface Product {
-  id: number;
-  name: string;
-  slug: string;
-  description: string;
-  price: number;
-  imageUrl: string;
-  images: ProductImage[];
-  category: Category;
-  categoryId: number;
-  status?: string;
-  quantity?: number;
-  isPublished: boolean;
-  isFeatured: boolean;
-  isNew: boolean;
-  discount?: number;
-  oldPrice?: number;
-  sku?: string;
-  weight?: number;
-  dimensions?: { length: number; width: number; height: number };
-  manufacturer?: string;
-  metaTitle?: string;
-  metaDescription?: string;
-}
-
 interface PageProps {
   params: Promise<{
     id: string;
