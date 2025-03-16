@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { deleteCategory } from '@/lib/db';
+import { turso } from '@/lib/turso';
 
 export async function DELETE(
   request: Request,
@@ -12,9 +11,12 @@ export async function DELETE(
     const id = parseInt(params.id);
 
     // Check if category has products
-    const productsCount = await prisma.product.count({
-      where: { categoryId: id },
+    const { rows } = await turso.execute({
+      sql: 'SELECT COUNT(*) as count FROM Product WHERE categoryId = ?',
+      args: [id]
     });
+    
+    const productsCount = rows[0].count;
 
     if (productsCount > 0) {
       return NextResponse.json(
@@ -23,9 +25,14 @@ export async function DELETE(
       );
     }
 
-    await prisma.category.delete({
-      where: { id },
-    });
+    const success = await deleteCategory(id);
+    
+    if (!success) {
+      return NextResponse.json(
+        { error: 'Категория не найдена' },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

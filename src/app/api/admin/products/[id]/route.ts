@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient, ProductStatus } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { getProductById, updateProduct, deleteProduct, getProductImages } from '@/lib/db';
+import { turso } from '@/lib/turso';
 
 // Get a single product
 export async function GET(
@@ -19,17 +18,7 @@ export async function GET(
       );
     }
 
-    const product = await prisma.product.findUnique({
-      where: { id },
-      include: {
-        category: true,
-        images: {
-          orderBy: {
-            order: 'asc',
-          },
-        },
-      },
-    });
+    const product = await getProductById(id);
 
     if (!product) {
       return NextResponse.json(
@@ -38,7 +27,27 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(product);
+    // Get product images
+    const images = await getProductImages(id);
+
+    // Get category name
+    const { rows: categoryRows } = await turso.execute({
+      sql: 'SELECT * FROM Category WHERE id = ?',
+      args: [product.categoryId]
+    });
+    
+    // Format the category data to match the expected structure
+    const category = categoryRows.length > 0 ? {
+      id: categoryRows[0].id,
+      name: categoryRows[0].name,
+      slug: categoryRows[0].slug
+    } : null;
+
+    return NextResponse.json({
+      ...product,
+      category,
+      images
+    });
   } catch (error) {
     console.error('Error fetching product:', error);
     return NextResponse.json(
@@ -91,49 +100,53 @@ export async function PUT(
       );
     }
 
-    // First, delete existing images
-    await prisma.productImage.deleteMany({
-      where: { productId: id },
+    const updatedProduct = await updateProduct(id, {
+      name,
+      description,
+      price,
+      categoryId,
+      status,
+      quantity,
+      isPublished,
+      isFeatured,
+      isNew,
+      sku,
+      weight,
+      dimensions,
+      manufacturer,
+      metaTitle,
+      metaDescription,
+      images
     });
 
-    // Update the product with new data
-    const updatedProduct = await prisma.product.update({
-      where: { id },
-      data: {
-        name,
-        description,
-        price,
-        imageUrl: images[0] || '',
-        categoryId,
-        images: {
-          create: images.map((url: string, index: number) => ({
-            url,
-            order: index,
-          })),
-        },
-        status: status as ProductStatus, // Type assertion to fix Prisma type error
-        quantity,
-        isPublished,
-        isFeatured,
-        isNew,
-        sku,
-        weight,
-        dimensions,
-        manufacturer,
-        metaTitle,
-        metaDescription,
-      },
-      include: {
-        category: true,
-        images: {
-          orderBy: {
-            order: 'asc',
-          },
-        },
-      },
-    });
+    if (!updatedProduct) {
+      return NextResponse.json(
+        { error: 'Product not found' },
+        { status: 404 }
+      );
+    }
 
-    return NextResponse.json(updatedProduct);
+    // Get product images
+    const updatedImages = await getProductImages(id);
+
+    // Get category name
+    const { rows: categoryRows } = await turso.execute({
+      sql: 'SELECT * FROM Category WHERE id = ?',
+      args: [updatedProduct.categoryId]
+    });
+    
+    // Format the category data to match the expected structure
+    const category = categoryRows.length > 0 ? {
+      id: categoryRows[0].id,
+      name: categoryRows[0].name,
+      slug: categoryRows[0].slug
+    } : null;
+
+    return NextResponse.json({
+      ...updatedProduct,
+      category,
+      images: updatedImages
+    });
   } catch (error) {
     console.error('Error updating product:', error);
     return NextResponse.json(
@@ -159,15 +172,14 @@ export async function DELETE(
       );
     }
     
-    // First delete all images associated with the product
-    await prisma.productImage.deleteMany({
-      where: { productId: id },
-    });
+    const success = await deleteProduct(id);
 
-    // Then delete the product
-    await prisma.product.delete({
-      where: { id },
-    });
+    if (!success) {
+      return NextResponse.json(
+        { error: 'Product not found' },
+        { status: 404 }
+      );
+    }
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {

@@ -1,25 +1,10 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { nanoid } from 'nanoid';
-
-const prisma = new PrismaClient();
+import { getProductsWithDetails, createProduct } from '@/lib/db';
 
 // Get all products
 export async function GET() {
   try {
-    const products = await prisma.product.findMany({
-      orderBy: {
-        id: 'asc',
-      },
-      include: {
-        category: true,
-        images: {
-          orderBy: {
-            order: 'asc',
-          },
-        },
-      },
-    });
+    const products = await getProductsWithDetails();
     return NextResponse.json(products);
   } catch (error) {
     console.error('Error fetching products:', error);
@@ -43,41 +28,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generate a random slug
-    let slug = `${nanoid(10)}`;
-
-    // Check if slug is unique (just in case, although collision is extremely unlikely)
-    let existingProduct = await prisma.product.findUnique({
-      where: { slug },
-    });
-
-    // In the rare case of a collision, generate a new slug
-    while (existingProduct) {
-      slug = `${nanoid(10)}`;
-      existingProduct = await prisma.product.findUnique({
-        where: { slug },
-      });
-    }
-
-    const product = await prisma.product.create({
-      data: {
-        name,
-        slug,
-        description,
-        price,
-        imageUrl: images[0] || '', // Keep the first image as the main image for backward compatibility
-        categoryId,
-        images: {
-          create: images.map((url: string, index: number) => ({
-            url,
-            order: index,
-          })),
-        },
-      },
-      include: {
-        category: true,
-        images: true,
-      },
+    const product = await createProduct({
+      name,
+      description,
+      price,
+      categoryId,
+      images: images || [],
     });
 
     return NextResponse.json(product);

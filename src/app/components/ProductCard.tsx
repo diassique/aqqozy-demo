@@ -25,9 +25,9 @@ interface ProductCardProps {
   price: number;
   imageUrl: string;
   images: ProductImage[];
-  category: {
-    name: string;
-    slug: string;
+  category?: {
+    name?: string;
+    slug?: string;
   };
   description?: string;
   viewMode?: 'grid' | 'list';
@@ -41,7 +41,7 @@ export const ProductCard = ({
   price, 
   imageUrl, 
   images = [], 
-  category, 
+  category = {}, 
   description, 
   viewMode = 'grid',
   status = 'IN_STOCK',
@@ -118,7 +118,7 @@ export const ProductCard = ({
             <div className="flex-1 py-2 flex flex-col min-h-[220px]">
               <div>
                 <div className="text-sm text-gray-500">
-                  {category.name}
+                  {category?.name || 'Без категории'}
                 </div>
                 
                 <h3 className="mt-2 text-xl font-medium text-gray-900 group-hover:text-[#E75825] transition-colors">
@@ -236,7 +236,7 @@ export const ProductCard = ({
           <div className="flex flex-col flex-grow pt-2">
             <div>
               <div className="text-sm text-gray-500">
-                {category.name}
+                {category?.name || 'Без категории'}
               </div>
               
               <h3 className="mt-2 text-[16px] font-medium text-gray-900 line-clamp-2 group-hover:text-[#E75825] transition-colors min-h-[2.75rem]">

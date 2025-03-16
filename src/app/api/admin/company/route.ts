@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { getCompanyInfo, updateCompanyInfo } from '@/lib/db';
 
 export async function GET() {
   try {
-    // Get the first company info record (assuming there's only one)
-    const companyInfo = await prisma.companyInfo.findFirst();
+    const companyInfo = await getCompanyInfo();
     
     if (!companyInfo) {
       return NextResponse.json({
@@ -38,36 +37,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get existing company info
-    const existingInfo = await prisma.companyInfo.findFirst();
+    await updateCompanyInfo({
+      telephone: data.telephone,
+      whatsapp: data.whatsapp,
+      address: data.address,
+      workSchedule: data.workSchedule,
+      email: data.email || null,
+      website: data.website || null,
+    });
 
-    let companyInfo;
-    if (existingInfo) {
-      // Update existing record
-      companyInfo = await prisma.companyInfo.update({
-        where: { id: existingInfo.id },
-        data: {
-          telephone: data.telephone,
-          whatsapp: data.whatsapp,
-          address: data.address,
-          workSchedule: data.workSchedule,
-          email: data.email || null,
-        },
-      });
-    } else {
-      // Create new record
-      companyInfo = await prisma.companyInfo.create({
-        data: {
-          telephone: data.telephone,
-          whatsapp: data.whatsapp,
-          address: data.address,
-          workSchedule: data.workSchedule,
-          email: data.email || null,
-        },
-      });
-    }
-
-    return NextResponse.json(companyInfo);
+    const updatedInfo = await getCompanyInfo();
+    return NextResponse.json(updatedInfo);
   } catch (error) {
     console.error('Error updating company info:', error);
     return NextResponse.json(

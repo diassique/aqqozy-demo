@@ -4,15 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "prisma generate && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate"
+    "migrate-to-turso": "tsx scripts/migrate-to-turso.ts"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",
-    "@prisma/client": "^6.4.1",
-    "@types/sqlite3": "^5.1.0",
+    "@libsql/client": "^0.14.0",
     "bcryptjs": "^3.0.2",
     "cloudinary": "^2.5.1",
     "jose": "^6.0.8",
@@ -21,13 +20,11 @@
     "next": "15.2.0",
     "next-auth": "^4.24.11",
     "next-cloudinary": "^6.16.0",
-    "prisma": "^6.4.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
     "react-input-mask": "^3.0.0-alpha.2",
     "react-medium-image-zoom": "^5.2.14",
-    "sqlite3": "^5.1.7",
     "swiper": "^11.2.4"
   },
   "devDependencies": {
@@ -40,6 +37,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.2.0",
     "tailwindcss": "^4",
+    "tsx": "^4.19.3",
     "typescript": "^5"
   }
 }

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { getProductBySlug, getProductImages } from '@/lib/db';
+import { turso } from '@/lib/turso';
 
 export async function GET(
   request: Request,
@@ -9,19 +8,7 @@ export async function GET(
 ) {
   try {
     const params = await context.params;
-    const product = await prisma.product.findUnique({
-      where: {
-        slug: params.slug,
-      },
-      include: {
-        category: true,
-        images: {
-          orderBy: {
-            order: 'asc',
-          },
-        },
-      },
-    });
+    const product = await getProductBySlug(params.slug);
 
     if (!product) {
       return NextResponse.json(
@@ -30,7 +17,27 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(product);
+    // Get product images
+    const images = await getProductImages(product.id);
+
+    // Get category
+    const { rows: categoryRows } = await turso.execute({
+      sql: 'SELECT * FROM Category WHERE id = ?',
+      args: [product.categoryId]
+    });
+    
+    // Format the category data to match the expected structure
+    const category = categoryRows.length > 0 ? {
+      id: categoryRows[0].id,
+      name: categoryRows[0].name,
+      slug: categoryRows[0].slug
+    } : null;
+
+    return NextResponse.json({
+      ...product,
+      category,
+      images
+    });
   } catch (error) {
     console.error('Error fetching product:', error);
     return NextResponse.json(
