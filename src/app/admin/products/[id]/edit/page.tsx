@@ -6,9 +6,16 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { use } from 'react';
 import { ImageUpload } from '@/app/components/ImageUpload';
-import { ProductStatus } from '@prisma/client';
 import { FullPageLoader } from '@/app/components/Loader';
 import toast from 'react-hot-toast';
+
+enum ProductStatus {
+  IN_STOCK = 'IN_STOCK',
+  OUT_OF_STOCK = 'OUT_OF_STOCK',
+  LOW_STOCK = 'LOW_STOCK',
+  PREORDER = 'PREORDER',
+  DISCONTINUED = 'DISCONTINUED'
+}
 
 interface Category {
   id: number;

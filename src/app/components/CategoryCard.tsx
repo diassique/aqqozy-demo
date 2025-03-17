@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { Category } from "@prisma/client";
+
+interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string | null;
+}
 
 interface CategoryCardProps {
   category: Category;
