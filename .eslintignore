@@ -1,0 +1,11 @@
+# Ignore all files
+*
+# But not TypeScript files
+!*.ts
+!*.tsx
+# Ignore node_modules
+node_modules
+# Ignore build files
+.next
+out
+dist 

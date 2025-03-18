@@ -1,6 +1,5 @@
 import { turso } from './turso';
 import { nanoid } from 'nanoid';
-import { Row } from '@libsql/client';
 
 export interface Category {
   id: number;
@@ -171,17 +170,14 @@ export async function getProductsWithDetails(): Promise<Product[]> {
       args: [product.id]
     });
     
-    // Format the category data to match the expected structure
-    const category = product.categoryId ? {
-      id: product.categoryId,
-      name: product.categoryName,
-      slug: product.categorySlug
-    } : null;
-    
     productsWithImages.push({
       ...product,
       images: images as unknown as ProductImage[],
-      category: category
+      category: product.categoryId ? {
+        id: product.categoryId,
+        name: product.categoryName,
+        slug: product.categorySlug
+      } : null
     });
   }
   
@@ -261,12 +257,20 @@ export async function createProduct(data: ProductCreateData): Promise<Product> {
   return product;
 }
 
-export interface ProductUpdateData extends Partial<Product> {
+export interface ProductUpdateData extends Omit<Partial<Product>, 'images'> {
   images?: string[];
 }
 
 export async function updateProduct(id: number, data: ProductUpdateData): Promise<Product | null> {
-  const { images, ...productData } = data;
+  const { images, category, ...productDataWithComplexTypes } = data;
+  
+  // Filter out non-primitive values that can't be used as SQL parameters
+  const productData: Record<string, string | number | boolean | null> = {};
+  for (const [key, value] of Object.entries(productDataWithComplexTypes)) {
+    if (value === null || typeof value !== 'object') {
+      productData[key] = value;
+    }
+  }
   
   const fields = Object.keys(productData)
     .map(key => `${key} = ?`)

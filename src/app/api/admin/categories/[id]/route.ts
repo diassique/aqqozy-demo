@@ -16,7 +16,7 @@ export async function DELETE(
       args: [id]
     });
     
-    const productsCount = rows[0].count;
+    const productsCount = Number(rows[0].count);
 
     if (productsCount > 0) {
       return NextResponse.json(
