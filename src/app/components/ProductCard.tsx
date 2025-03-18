@@ -178,9 +178,9 @@ export const ProductCard = ({
 
   return (
     <>
-      <Link href={`/products/${slug}`} className="group block h-full relative p-3">
-        <div className="flex flex-col h-full transition-all duration-300 relative z-10">
-          <div className="relative aspect-square">
+      <Link href={`/products/${slug}`} className="group block h-full relative p-3 max-w-full">
+        <div className="flex flex-col h-full transition-all duration-300 relative z-10 max-w-full">
+          <div className="relative aspect-square max-w-full">
             {isNew && (
               <div className="absolute top-3 right-3 z-20 bg-[#E1FC49] text-black text-xs font-medium px-2.5 py-1 rounded-full flex items-center gap-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
@@ -198,8 +198,8 @@ export const ProductCard = ({
                   bulletClass: 'swiper-pagination-bullet',
                 }}
                 loop={allImages.length > 1}
-                allowTouchMove={false}
-                className="h-full [&_.swiper-pagination]:!bottom-4 [&_.swiper-pagination]:!z-20 
+                allowTouchMove={true}
+                className="h-full w-full [&_.swiper-pagination]:!bottom-4 [&_.swiper-pagination]:!z-20 
                   [&_.swiper-pagination-bullet]:!w-2 
                   [&_.swiper-pagination-bullet]:!h-2 
                   [&_.swiper-pagination-bullet]:!mx-1.5
@@ -212,12 +212,12 @@ export const ProductCard = ({
               >
                 {allImages.map((image, index) => (
                   <SwiperSlide key={index} className="h-full w-full">
-                    <div className="relative w-full h-full rounded-2xl overflow-hidden">
+                    <div className="relative w-full h-full rounded-2xl overflow-hidden flex justify-center items-center">
                       <Image
                         src={image}
                         alt={`${name} - image ${index + 1}`}
                         fill
-                        className="object-contain md:object-cover transition-transform duration-300 group-hover:scale-105 rounded-2xl"
+                        className="object-contain transition-transform duration-300 group-hover:scale-105 rounded-2xl"
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         onError={() => handleImageError(image)}
                         priority={index === 0}
