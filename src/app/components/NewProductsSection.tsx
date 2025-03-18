@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { ProductCard } from './ProductCard';
+import { Loader } from './Loader';
 
 interface Product {
   id: number;
@@ -30,16 +31,20 @@ interface Product {
 
 export const NewProductsSection = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchLatestProducts = async () => {
       try {
+        setLoading(true);
         const res = await fetch('/api/admin/products?limit=4&sort=latest');
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
         setProducts(data);
       } catch (err) {
         console.error('Error fetching latest products:', err);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -74,24 +79,28 @@ export const NewProductsSection = () => {
         </div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-          {products.map((product) => (
-            <div key={product.id} className="max-w-[300px] w-full mx-auto">
-              <ProductCard
-                name={product.name}
-                slug={product.slug}
-                price={product.price}
-                imageUrl={product.imageUrl}
-                images={product.images}
-                category={product.category}
-                description={product.description}
-                viewMode="grid"
-                isNew={product.isNew}
-                status={product.status}
-              />
-            </div>
-          ))}
-        </div>
+        {loading ? (
+          <Loader />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+            {products.map((product) => (
+              <div key={product.id} className="max-w-[300px] w-full mx-auto">
+                <ProductCard
+                  name={product.name}
+                  slug={product.slug}
+                  price={product.price}
+                  imageUrl={product.imageUrl}
+                  images={product.images}
+                  category={product.category}
+                  description={product.description}
+                  viewMode="grid"
+                  isNew={product.isNew}
+                  status={product.status}
+                />
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Mobile CTA */}
         <div className="mt-8 text-center md:hidden">
