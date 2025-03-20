@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Fragment } from 'react';
 import { Dialog, Transition, TransitionChild } from '@headlessui/react';
-import { X, Send, User, Phone, MessageSquare } from 'lucide-react';
+import { X, Send, User, Phone, MessageSquare, AlertCircle } from 'lucide-react';
 
 interface ContactModalProps {
   isOpen: boolean;
@@ -15,6 +15,7 @@ export const ContactModal = ({ isOpen, onClose }: ContactModalProps) => {
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -23,45 +24,55 @@ export const ContactModal = ({ isOpen, onClose }: ContactModalProps) => {
       setPhone('');
       setMessage('');
       setSubmitted(false);
+      setError(null);
     }
   }, [isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError(null);
     
-    // Submit form data to API
-    fetch('/api/contact', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name,
-        phone,
-        message,
-      }),
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to submit form');
-        }
-        return response.json();
-      })
-      .then(() => {
-        setIsSubmitting(false);
-        setSubmitted(true);
-        
-        // Close modal after showing success message
-        setTimeout(() => {
-          onClose();
-        }, 2000);
-      })
-      .catch(error => {
-        console.error('Error submitting form:', error);
-        setIsSubmitting(false);
-        // Could add error state handling here
+    console.log('📝 Submitting form with data:', { name, phone, messageLength: message.length });
+    
+    try {
+      // Submit form data to API
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          phone,
+          message,
+        }),
       });
+
+      const data = await response.json();
+      
+      console.log('📬 API Response:', {
+        status: response.status,
+        ok: response.ok,
+        data
+      });
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to submit form');
+      }
+
+      setIsSubmitting(false);
+      setSubmitted(true);
+      
+      // Close modal after showing success message
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+    } catch (error) {
+      console.error('❌ Form submission error:', error);
+      setIsSubmitting(false);
+      setError(error.message || 'Failed to submit form. Please try again.');
+    }
   };
 
   // Format phone number as user types
@@ -149,6 +160,13 @@ export const ContactModal = ({ isOpen, onClose }: ContactModalProps) => {
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-4">
+                    {error && (
+                      <div className="p-3 rounded-lg bg-red-50 flex items-start gap-2">
+                        <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        <p className="text-sm text-red-600">{error}</p>
+                      </div>
+                    )}
+                    
                     <div>
                       <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                         Ваше имя
