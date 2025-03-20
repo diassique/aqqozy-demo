@@ -9,6 +9,10 @@ interface ContactModalProps {
   onClose: () => void;
 }
 
+const API_URL = process.env.NEXT_PUBLIC_VERCEL_URL 
+  ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/api/contact`
+  : '/api/contact';
+
 export const ContactModal = ({ isOpen, onClose }: ContactModalProps) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -33,11 +37,16 @@ export const ContactModal = ({ isOpen, onClose }: ContactModalProps) => {
     setIsSubmitting(true);
     setError(null);
     
-    console.log('📝 Submitting form with data:', { name, phone, messageLength: message.length });
+    console.log('📝 Submitting form with data:', { 
+      name, 
+      phone, 
+      messageLength: message.length,
+      apiUrl: API_URL
+    });
     
     try {
       // Submit form data to API
-      const response = await fetch('/api/contact', {
+      const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -49,12 +58,19 @@ export const ContactModal = ({ isOpen, onClose }: ContactModalProps) => {
         }),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('❌ Failed to parse API response:', parseError);
+        throw new Error('Server response was not in the expected format');
+      }
       
       console.log('📬 API Response:', {
         status: response.status,
         ok: response.ok,
-        data
+        data,
+        url: API_URL
       });
 
       if (!response.ok) {
@@ -69,9 +85,17 @@ export const ContactModal = ({ isOpen, onClose }: ContactModalProps) => {
         onClose();
       }, 2000);
     } catch (error) {
-      console.error('❌ Form submission error:', error);
+      console.error('❌ Form submission error:', {
+        message: error.message,
+        stack: error.stack,
+        url: API_URL
+      });
       setIsSubmitting(false);
-      setError(error.message || 'Failed to submit form. Please try again.');
+      setError(
+        error.message === 'Failed to fetch' 
+          ? 'Network error. Please check your internet connection and try again.'
+          : error.message || 'Failed to submit form. Please try again.'
+      );
     }
   };
 
