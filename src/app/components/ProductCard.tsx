@@ -104,7 +104,7 @@ export const ProductCard = ({
                     src={allImages[0]}
                     alt={name}
                     fill
-                    className="object-contain md:object-cover transition-transform duration-300 group-hover:scale-105"
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
                     sizes="280px"
                     onError={() => handleImageError(allImages[0])}
                     priority
@@ -217,7 +217,7 @@ export const ProductCard = ({
                         src={image}
                         alt={`${name} - image ${index + 1}`}
                         fill
-                        className="object-contain transition-transform duration-300 group-hover:scale-105 rounded-2xl"
+                        className="object-cover transition-transform duration-300 group-hover:scale-105 rounded-2xl"
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         onError={() => handleImageError(image)}
                         priority={index === 0}

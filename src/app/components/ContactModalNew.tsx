@@ -30,16 +30,38 @@ export const ContactModal = ({ isOpen, onClose }: ContactModalProps) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate form submission
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitted(true);
-      
-      // Close modal after showing success message
-      setTimeout(() => {
-        onClose();
-      }, 2000);
-    }, 1000);
+    // Submit form data to API
+    fetch('/api/contact', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name,
+        phone,
+        message,
+      }),
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to submit form');
+        }
+        return response.json();
+      })
+      .then(() => {
+        setIsSubmitting(false);
+        setSubmitted(true);
+        
+        // Close modal after showing success message
+        setTimeout(() => {
+          onClose();
+        }, 2000);
+      })
+      .catch(error => {
+        console.error('Error submitting form:', error);
+        setIsSubmitting(false);
+        // Could add error state handling here
+      });
   };
 
   // Format phone number as user types
