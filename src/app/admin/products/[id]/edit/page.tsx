@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { use } from 'react';
 import { ImageUpload } from '@/app/components/ImageUpload';
 import { FullPageLoader } from '@/app/components/Loader';
+import RichTextEditor from '@/app/components/RichTextEditor';
 import toast from 'react-hot-toast';
 
 enum ProductStatus {
@@ -40,6 +41,7 @@ interface FormData {
   name: string;
   description: string;
   price: string;
+  priceIsFrom: boolean;
   images: string[];
   categoryId: string;
   status: ProductStatus;
@@ -69,6 +71,7 @@ export default function EditProductPage({ params }: PageProps) {
     name: '',
     description: '',
     price: '0',
+    priceIsFrom: false,
     images: [],
     categoryId: '',
     status: ProductStatus.IN_STOCK,
@@ -112,6 +115,7 @@ export default function EditProductPage({ params }: PageProps) {
           name: product.name || '',
           description: product.description || '',
           price: String(product.price || 0),
+          priceIsFrom: product.priceIsFrom ?? false,
           images: product.images?.map((img: ProductImage) => img.url) || [],
           categoryId: String(product.categoryId || ''),
           status: product.status || ProductStatus.IN_STOCK,
@@ -155,6 +159,7 @@ export default function EditProductPage({ params }: PageProps) {
         body: JSON.stringify({
           ...formData,
           price: parseFloat(formData.price) || 0,
+          priceIsFrom: formData.priceIsFrom,
           categoryId: parseInt(formData.categoryId) || 0,
           quantity: parseInt(formData.quantity) || 0,
           weight: parseFloat(formData.weight) || 0,
@@ -227,32 +232,41 @@ export default function EditProductPage({ params }: PageProps) {
                         required
                       />
                     </div>
-                    <div>
-                      <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
                         Описание
                       </label>
-                      <textarea
-                        id="description"
+                      <RichTextEditor
                         value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"
-                        rows={3}
+                        onChange={(value) => setFormData({ ...formData, description: value })}
+                        placeholder="Введите описание товара..."
                       />
                     </div>
                     <div>
                       <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
                         Цена
                       </label>
-                      <input
-                        type="number"
-                        id="price"
-                        value={formData.price}
-                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"
-                        required
-                        min="0"
-                        step="0.01"
-                      />
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="number"
+                          id="price"
+                          value={formData.price}
+                          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"
+                          required
+                          min="0"
+                          step="0.01"
+                        />
+                        <label className="flex items-center gap-2 mt-1">
+                          <input
+                            type="checkbox"
+                            checked={formData.priceIsFrom}
+                            onChange={(e) => setFormData({ ...formData, priceIsFrom: e.target.checked })}
+                            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span className="text-sm text-gray-700">от</span>
+                        </label>
+                      </div>
                     </div>
                     <div>
                       <label htmlFor="sku" className="block text-sm font-medium text-gray-700 mb-1">

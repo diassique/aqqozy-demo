@@ -15,6 +15,7 @@ CREATE TABLE Product (
   slug TEXT UNIQUE NOT NULL,
   description TEXT,
   price REAL NOT NULL,
+  priceIsFrom BOOLEAN NOT NULL DEFAULT false,
   imageUrl TEXT NOT NULL,
   categoryId INTEGER NOT NULL,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,

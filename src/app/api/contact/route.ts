@@ -12,19 +12,35 @@ if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
   });
 }
 
+// Common headers for all responses
+const headers = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Content-Type': 'application/json',
+};
+
+export async function GET() {
+  return NextResponse.json(
+    { 
+      error: 'Method not allowed. This endpoint only accepts POST requests.',
+      status: 'error'
+    },
+    { 
+      status: 405,
+      headers
+    }
+  );
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers
+  });
+}
+
 export async function POST(req: Request) {
-  // Add CORS headers
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-  };
-
-  // Handle OPTIONS request for CORS
-  if (req.method === 'OPTIONS') {
-    return new NextResponse(null, { headers });
-  }
-
   console.log('📨 Received contact form submission');
   console.log('Environment check:', {
     NODE_ENV: process.env.NODE_ENV,
@@ -48,7 +64,10 @@ export async function POST(req: Request) {
       console.error('❌ Validation failed - missing required fields');
       return NextResponse.json(
         { error: 'Name, phone and message are required' },
-        { status: 400, headers }
+        { 
+          status: 400,
+          headers
+        }
       );
     }
 
@@ -91,7 +110,13 @@ export async function POST(req: Request) {
       }
       
       console.log('✅ Message sent successfully to Telegram');
-      return NextResponse.json({ success: true }, { status: 200, headers });
+      return NextResponse.json(
+        { success: true }, 
+        { 
+          status: 200,
+          headers
+        }
+      );
     } catch (telegramError) {
       console.error('❌ Telegram error details:', {
         error: telegramError.message,
@@ -99,7 +124,10 @@ export async function POST(req: Request) {
       });
       return NextResponse.json(
         { error: 'Failed to send message to Telegram. Please try again later.' },
-        { status: 500, headers }
+        { 
+          status: 500,
+          headers
+        }
       );
     }
   } catch (error) {
@@ -109,7 +137,10 @@ export async function POST(req: Request) {
     });
     return NextResponse.json(
       { error: error.message || 'Failed to process contact form' },
-      { status: 500, headers }
+      { 
+        status: 500,
+        headers
+      }
     );
   }
 } 

@@ -2,12 +2,16 @@
 
 import { useState, useEffect, Fragment } from 'react';
 import { Dialog, Transition, TransitionChild } from '@headlessui/react';
-import { X, Send, User, Phone, MessageSquare } from 'lucide-react';
+import { X, Send, User, Phone, MessageSquare, AlertCircle } from 'lucide-react';
 
 interface ContactModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+const API_URL = process.env.NEXT_PUBLIC_VERCEL_URL 
+  ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/api/contact`
+  : '/api/contact';
 
 export const ContactModal = ({ isOpen, onClose }: ContactModalProps) => {
   const [name, setName] = useState('');
@@ -15,6 +19,7 @@ export const ContactModal = ({ isOpen, onClose }: ContactModalProps) => {
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -23,23 +28,63 @@ export const ContactModal = ({ isOpen, onClose }: ContactModalProps) => {
       setPhone('');
       setMessage('');
       setSubmitted(false);
+      setError(null);
     }
   }, [isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError(null);
     
-    // Simulate form submission
-    setTimeout(() => {
+    console.log('📝 Submitting form with data:', { 
+      name, 
+      phone, 
+      messageLength: message.length,
+      apiUrl: API_URL
+    });
+    
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          phone,
+          message,
+        }),
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('❌ Failed to parse API response:', parseError);
+        throw new Error('Server response was not in the expected format');
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to submit form');
+      }
+
       setIsSubmitting(false);
       setSubmitted(true);
       
-      // Close modal after showing success message
       setTimeout(() => {
         onClose();
       }, 2000);
-    }, 1000);
+    } catch (error) {
+      console.error('❌ Form submission error:', error.message);
+      setIsSubmitting(false);
+      setError(
+        error.message === 'Failed to fetch' 
+          ? 'Network error. Please check your internet connection and try again.'
+          : error.message || 'Failed to submit form. Please try again.'
+      );
+    }
   };
 
   // Format phone number as user types
@@ -127,6 +172,13 @@ export const ContactModal = ({ isOpen, onClose }: ContactModalProps) => {
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-4">
+                    {error && (
+                      <div className="p-3 rounded-lg bg-red-50 flex items-start gap-2">
+                        <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        <p className="text-sm text-red-600">{error}</p>
+                      </div>
+                    )}
+                    
                     <div>
                       <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                         Ваше имя
@@ -213,10 +265,10 @@ export const ContactModal = ({ isOpen, onClose }: ContactModalProps) => {
                     </div>
 
                     <p className="text-xs text-gray-500 text-center mt-4">
-                      Нажимая кнопку «Отправить сообщение», вы соглашаетесь с нашей{' '}
-                      <a href="/privacy" className="text-[#fa5a20] hover:underline">
+                      Нажимая кнопку «Отправить сообщение», вы соглашаетесьddddd с нашей{' '}
+                      <p className="text-[#fa5a20] hover:underline">
                         политикой конфиденциальности
-                      </a>
+                      </p>
                     </p>
                   </form>
                 )}

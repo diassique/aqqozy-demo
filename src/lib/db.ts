@@ -16,6 +16,7 @@ export interface Product {
   slug: string;
   description: string | null;
   price: number;
+  priceIsFrom: boolean;
   imageUrl: string;
   categoryId: number;
   createdAt: string;
@@ -98,14 +99,23 @@ export async function createCategory(data: { name: string; description?: string 
   return rows[0] as unknown as Category;
 }
 
-export async function updateCategory(id: number, data: Partial<Category>): Promise<Category | null> {
-  const fields = Object.keys(data)
-    .map(key => `${key} = ?`)
+export async function updateCategory(id: number, data: Partial<Omit<Category, 'id' | 'slug'>>): Promise<Category | null> {
+  const fieldsToUpdate = { ...data };
+  if ('name' in data && data.name) {
+    (fieldsToUpdate as Partial<Category>).slug = data.name.toLowerCase().replace(/\s+/g, '-');
+  }
+
+  const fields = Object.keys(fieldsToUpdate)
+    .map(key => `"${key}" = ?`)
     .join(', ');
-  const values = Object.values(data);
+  const values = Object.values(fieldsToUpdate);
+
+  if (values.length === 0) {
+    return getCategoryById(id);
+  }
   
   const { rows } = await turso.execute({
-    sql: `UPDATE Category SET ${fields}, updatedAt = CURRENT_TIMESTAMP 
+    sql: `UPDATE Category SET ${fields}, "updatedAt" = CURRENT_TIMESTAMP 
      WHERE id = ? RETURNING *`,
     args: [...values, id]
   });
@@ -184,10 +194,154 @@ export async function getProductsWithDetails(): Promise<Product[]> {
   return productsWithImages as unknown as Product[];
 }
 
+export async function getProductsWithDetailsLimited(limit?: number, sort?: string): Promise<Product[]> {
+  let query = `
+    SELECT p.*, c.name as categoryName, c.id as categoryId, c.slug as categorySlug
+    FROM Product p
+    LEFT JOIN Category c ON p.categoryId = c.id
+  `;
+  
+  // Add sorting
+  if (sort === 'latest') {
+    query += ' ORDER BY p.createdAt DESC';
+  } else {
+    query += ' ORDER BY p.createdAt DESC';
+  }
+  
+  // Add limit
+  if (limit && limit > 0) {
+    query += ` LIMIT ${limit}`;
+  }
+  
+  const { rows: products } = await turso.execute(query);
+  
+  const productsWithImages = [];
+  
+  for (const product of products) {
+    const { rows: images } = await turso.execute({
+      sql: 'SELECT * FROM ProductImage WHERE productId = ? ORDER BY order_num',
+      args: [product.id]
+    });
+    
+    productsWithImages.push({
+      ...product,
+      images: images as unknown as ProductImage[],
+      category: product.categoryId ? {
+        id: product.categoryId,
+        name: product.categoryName,
+        slug: product.categorySlug
+      } : null
+    });
+  }
+  
+  return productsWithImages as unknown as Product[];
+}
+
+export async function getProductsWithCount({
+  page = 1,
+  limit = 12,
+  categorySlug,
+  minPrice,
+  maxPrice,
+  sort = 'latest'
+}: {
+  page?: number;
+  limit?: number;
+  categorySlug?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  sort?: string;
+}) {
+  const offset = (page - 1) * limit;
+
+  let whereClauses = 'WHERE p.isPublished = TRUE';
+  const queryParams: any[] = [];
+
+  if (categorySlug && categorySlug !== 'all') {
+    whereClauses += ' AND c.slug = ?';
+    queryParams.push(categorySlug);
+  }
+
+  if (minPrice !== undefined) {
+    whereClauses += ' AND p.price >= ?';
+    queryParams.push(minPrice);
+  }
+
+  if (maxPrice !== undefined) {
+    whereClauses += ' AND p.price <= ?';
+    queryParams.push(maxPrice);
+  }
+
+  // First, get the total count of products with filters
+  const countQuery = `
+    SELECT COUNT(p.id) as total
+    FROM Product p
+    LEFT JOIN Category c ON p.categoryId = c.id
+    ${whereClauses}
+  `;
+  
+  const { rows: countRows } = await turso.execute({
+    sql: countQuery,
+    args: queryParams
+  });
+  const total = countRows[0].total as number;
+
+  // Then, get the paginated products
+  let productsQuery = `
+    SELECT p.*, c.name as categoryName, c.id as categoryId, c.slug as categorySlug
+    FROM Product p
+    LEFT JOIN Category c ON p.categoryId = c.id
+    ${whereClauses}
+  `;
+  
+  if (sort === 'latest') {
+    productsQuery += ' ORDER BY p.createdAt DESC';
+  } else if (sort === 'price-asc') {
+    productsQuery += ' ORDER BY p.price ASC';
+  } else if (sort === 'price-desc') {
+    productsQuery += ' ORDER BY p.price DESC';
+  } else {
+    productsQuery += ' ORDER BY p.createdAt DESC'; // Default sort
+  }
+
+  productsQuery += ' LIMIT ? OFFSET ?';
+  queryParams.push(limit, offset);
+
+  const { rows: products } = await turso.execute({
+    sql: productsQuery,
+    args: queryParams
+  });
+
+  const productsWithImages = [];
+  for (const product of products) {
+    const { rows: images } = await turso.execute({
+      sql: 'SELECT * FROM ProductImage WHERE productId = ? ORDER BY order_num',
+      args: [product.id]
+    });
+    
+    productsWithImages.push({
+      ...product,
+      images: images as unknown as ProductImage[],
+      category: product.categoryId ? {
+        id: product.categoryId,
+        name: product.categoryName,
+        slug: product.categorySlug
+      } : null
+    });
+  }
+
+  return {
+    products: productsWithImages as unknown as Product[],
+    total,
+    totalPages: Math.ceil(total / limit),
+  };
+}
+
 export interface ProductCreateData {
   name: string;
   description?: string;
   price: number;
+  priceIsFrom?: boolean;
   categoryId: number;
   images: string[];
   status?: string;
@@ -210,12 +364,12 @@ export async function createProduct(data: ProductCreateData): Promise<Product> {
   // Insert the product
   const { rows } = await turso.execute({
     sql: `INSERT INTO Product (
-      name, slug, description, price, imageUrl, categoryId,
+      name, slug, description, price, priceIsFrom, imageUrl, categoryId,
       createdAt, updatedAt, status, quantity, isPublished,
       isFeatured, isNew, sku, weight, dimensions, manufacturer,
       metaTitle, metaDescription
     ) VALUES (
-      ?, ?, ?, ?, ?, ?, 
+      ?, ?, ?, ?, ?, ?, ?, 
       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, ?, ?,
       ?, ?, ?, ?, ?, ?,
       ?, ?
@@ -225,6 +379,7 @@ export async function createProduct(data: ProductCreateData): Promise<Product> {
       slug,
       data.description || null,
       data.price,
+      data.priceIsFrom !== undefined ? data.priceIsFrom : false,
       data.images[0] || '',
       data.categoryId,
       data.status || 'IN_STOCK',

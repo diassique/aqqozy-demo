@@ -66,24 +66,21 @@ export const CategoriesMenu = () => {
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 bg-black/50 z-[100] lg:bg-transparent lg:inset-auto lg:fixed">
+        <div 
+          className="
+            fixed inset-0 bg-black/50 z-[100]
+            lg:hidden
+          "
+        >
           <div 
-            className={`
-              fixed inset-x-0 top-0 h-[100dvh] bg-white lg:bg-white lg:h-auto lg:max-h-[600px] 
-              lg:w-64 lg:fixed lg:inset-auto shadow-lg overflow-hidden
+            className="
+              fixed inset-x-0 top-0 h-[100dvh] bg-white
               transition-transform duration-300 ease-out
-              ${isOpen ? 'translate-y-0' : '-translate-y-full'}
-              lg:translate-y-0 lg:rounded-lg lg:absolute z-[101]
-            `}
-            style={{
-              top: typeof window !== 'undefined' && window.innerWidth >= 1024 ? 
-                (buttonRef.current ? `${buttonRef.current.getBoundingClientRect().bottom}px` : '0') : '0',
-              left: typeof window !== 'undefined' && window.innerWidth >= 1024 ? 
-                (buttonRef.current ? `${buttonRef.current.getBoundingClientRect().left}px` : '0') : '0',
-            }}
+              translate-y-0
+            "
           >
-            <div className="flex flex-col h-full lg:h-auto">
-              <div className="sticky top-0 bg-white p-4 border-b border-gray-100 lg:hidden">
+            <div className="flex flex-col h-full">
+              <div className="sticky top-0 bg-white p-4 border-b border-gray-100">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-lg">Категории</span>
                   <button 
@@ -101,20 +98,47 @@ export const CategoriesMenu = () => {
                       <Link
                         key={category.id}
                         href={`/category/${category.slug}`}
-                        className="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-[#E75825] transition-colors text-[15px] lg:py-2.5"
+                        className="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-[#E75825] transition-colors text-[15px]"
                         onClick={() => setIsOpen(false)}
                       >
                         {category.name}
                       </Link>
                     ))
                   ) : (
-                    <div className="px-4 py-3 text-gray-500 text-[15px] lg:py-2.5">Нет доступных категорий</div>
+                    <div className="px-4 py-3 text-gray-500 text-[15px]">Нет доступных категорий</div>
                   )}
                 </div>
               </div>
             </div>
           </div>
         </div>
+      )}
+      
+      {isOpen && (
+          <div 
+            className="
+              hidden lg:block absolute top-full left-0 mt-2 z-[101]
+              w-64 bg-white rounded-lg shadow-lg max-h-96 overflow-y-auto
+              scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100
+            "
+          >
+            <div className="py-2">
+              {categories.length > 0 ? (
+                categories.map((category) => (
+                  <Link
+                    key={category.id}
+                    href={`/category/${category.slug}`}
+                    className="block px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-[#E75825] transition-colors text-[15px]"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {category.name}
+                  </Link>
+                ))
+              ) : (
+                <div className="px-4 py-2.5 text-gray-500 text-[15px]">Нет доступных категорий</div>
+              )}
+            </div>
+          </div>
       )}
     </div>
   );

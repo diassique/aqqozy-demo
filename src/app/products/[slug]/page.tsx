@@ -7,6 +7,8 @@ import { ChevronRight, HelpCircle } from 'lucide-react';
 import { FullPageLoader } from '@/app/components/Loader';
 import Zoom from 'react-medium-image-zoom';
 import 'react-medium-image-zoom/dist/styles.css';
+import ReturnPolicyModal from '@/app/components/ReturnPolicyModal';
+import { Toaster, toast } from 'react-hot-toast';
 
 interface Product {
   id: number;
@@ -14,6 +16,7 @@ interface Product {
   slug: string;
   description: string;
   price: number;
+  priceIsFrom: boolean;
   imageUrl: string;
   categoryId: number;
   category: {
@@ -49,6 +52,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'description' | 'additional'>('description');
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -191,9 +195,9 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                 {product.name}
               </h1>
               
-              <div className="flex items-center gap-4 mb-6">
+              <div className="flex items-center gap-4 mb-3">
                 <span className="text-2xl font-bold text-[#1e3a8a]">
-                  {product.price.toLocaleString('ru-RU')} ₸
+                  {product.priceIsFrom ? 'от ' : ''}{product.price.toLocaleString('ru-RU')} ₸
                 </span>
                 {product.isNew && (
                   <span className="px-3 py-1 text-sm font-medium text-white bg-green-500 rounded-full">
@@ -204,7 +208,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
               {/* Characteristics */}
               <div className="mb-8">
-                <h3 className="text-lg font-semibold mb-4">Характеристики</h3>
+                <h3 className="text-lg font-semibold mb-2">Характеристики</h3>
                 <div className="grid grid-cols-1 gap-0">
                   {product.manufacturer && (
                     <div className="flex flex-col sm:flex-row items-start sm:items-center py-2 border-b border-gray-100">
@@ -218,13 +222,13 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                       <span className="text-gray-900">{product.sku}</span>
                     </div>
                   )}
-                  {product.weight && (
+                  {(product.weight || product.weight === 0) && (
                     <div className="flex flex-col sm:flex-row items-start sm:items-center py-2 border-b border-gray-100">
                       <span className="text-gray-600 w-full sm:w-1/3 mb-1 sm:mb-0">Вес</span>
                       <span className="text-gray-900">{product.weight} кг</span>
                     </div>
                   )}
-                  {product.dimensions && product.dimensions.length !== null && product.dimensions.width !== null && product.dimensions.height !== null && (
+                  {product.dimensions && (product.dimensions.length || product.dimensions.length === 0) && (product.dimensions.width || product.dimensions.width === 0) && (product.dimensions.height || product.dimensions.height === 0) && (
                     <div className="flex flex-col sm:flex-row items-start sm:items-center py-2 border-b border-gray-100">
                       <span className="text-gray-600 w-full sm:w-1/3 mb-1 sm:mb-0">Размеры</span>
                       <span className="text-gray-900">
@@ -232,7 +236,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                       </span>
                     </div>
                   )}
-                  {product.quantity !== null && (
+                  {(product.quantity || product.quantity === 0) && (
                     <div className="flex flex-col sm:flex-row items-start sm:items-center py-2 border-b border-gray-100">
                       <span className="text-gray-600 w-full sm:w-1/3 mb-1 sm:mb-0">Наличие</span>
                       <span className="text-gray-900">
@@ -266,6 +270,16 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                     </div>
                   )}
                 </div>
+              </div>
+
+              <div className="text-sm text-gray-600 mb-6">
+                <span>Условия возврата: возврат товара в течение 14 дней по договоренности. </span>
+                <button
+                  onClick={() => setIsReturnModalOpen(true)}
+                  className="text-[#1e3a8a] hover:underline font-medium"
+                >
+                  Подробнее
+                </button>
               </div>
 
               <div className="space-y-4">
@@ -314,7 +328,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(window.location.href);
-                        // You might want to add a toast notification here
+                        toast.success('Ссылка скопирована');
                       }}
                       className="hover:opacity-80 transition-opacity"
                     >
@@ -402,9 +416,10 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             <div className="bg-white rounded-2xl shadow-sm p-8">
               {activeTab === 'description' ? (
                 <div className="prose prose-gray max-w-none">
-                  <p className="text-gray-600 whitespace-pre-line">
-                    {product.description}
-                  </p>
+                  <div 
+                    className="text-gray-600 rich-text-content"
+                    dangerouslySetInnerHTML={{ __html: product.description }}
+                  />
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-0">
@@ -420,13 +435,13 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                       <span className="text-gray-900">{product.sku}</span>
                     </div>
                   )}
-                  {product.weight && (
+                  {(product.weight || product.weight === 0) && (
                     <div className="flex flex-col sm:flex-row items-start sm:items-center py-2 border-b border-gray-100">
                       <span className="text-gray-600 w-full sm:w-1/3 mb-1 sm:mb-0">Вес</span>
                       <span className="text-gray-900">{product.weight} кг</span>
                     </div>
                   )}
-                  {product.dimensions && product.dimensions.length !== null && product.dimensions.width !== null && product.dimensions.height !== null && (
+                  {product.dimensions && (product.dimensions.length || product.dimensions.length === 0) && (product.dimensions.width || product.dimensions.width === 0) && (product.dimensions.height || product.dimensions.height === 0) && (
                     <div className="flex flex-col sm:flex-row items-start sm:items-center py-2 border-b border-gray-100">
                       <span className="text-gray-600 w-full sm:w-1/3 mb-1 sm:mb-0">Размеры</span>
                       <span className="text-gray-900">
@@ -434,7 +449,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                       </span>
                     </div>
                   )}
-                  {product.quantity !== null && (
+                  {(product.quantity || product.quantity === 0) && (
                     <div className="flex flex-col sm:flex-row items-start sm:items-center py-2 border-b border-gray-100">
                       <span className="text-gray-600 w-full sm:w-1/3 mb-1 sm:mb-0">Наличие</span>
                       <span className="text-gray-900">
@@ -472,7 +487,137 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             </div>
           </div>
         </div>
+
+        {/* Why Us Section */}
+        <div className="mt-12">
+          <div className="bg-white rounded-2xl shadow-sm p-8 md:p-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+              Почему выбирают Aqqozy?
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
+              <div className="text-center">
+                <div className="flex justify-center items-center mb-4 h-16">
+                  <Image src="/icons/benefits/benefit-1.svg" alt="Гарантированное наличие" width={64} height={64} />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Гарантированное наличие</h3>
+                <p className="text-gray-600 text-sm">Широкий ассортимент товаров всегда в наличии на нашем складе.</p>
+              </div>
+              <div className="text-center">
+                <div className="flex justify-center items-center mb-4 h-16">
+                  <Image src="/icons/benefits/benefit-2.svg" alt="Выгодные оптовые цены" width={64} height={64} />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Выгодные оптовые цены</h3>
+                <p className="text-gray-600 text-sm">Специальные условия для заказов от 50 единиц.</p>
+              </div>
+              <div className="text-center">
+                <div className="flex justify-center items-center mb-4 h-16">
+                  <Image src="/icons/benefits/benefit-3.svg" alt="Первоклассный сервис" width={64} height={64} />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Первоклассный сервис</h3>
+                <p className="text-gray-600 text-sm">Профессиональные консультации и поддержка на всех этапах.</p>
+              </div>
+              <div className="text-center">
+                <div className="flex justify-center items-center mb-4 h-16">
+                  <Image src="/icons/benefits/benefit-4.svg" alt="Бесплатная доставка" width={64} height={64} />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Бесплатная доставка</h3>
+                <p className="text-gray-600 text-sm">Для крупных заказов от 100 единиц.</p>
+              </div>
+            </div>
+            <div className="mt-8 pt-8 border-t border-gray-200 text-center bg-gray-50 rounded-lg p-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-3">
+                Оптовые поставки и сотрудничество
+              </h3>
+              <p className="text-gray-600 max-w-3xl mx-auto">
+                Мы специализируемся на комплексном оснащении строительных бригад и нацелены на долгосрочное сотрудничество с компаниями. Предлагаем заключение договоров и оперативную доставку в любой регион.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
+      <ReturnPolicyModal isOpen={isReturnModalOpen} onClose={() => setIsReturnModalOpen(false)} />
+      
+      <style jsx global>{`
+        .rich-text-content .editor-paragraph {
+          margin: 0 0 8px 0;
+          position: relative;
+          line-height: 1.5;
+        }
+        .rich-text-content .editor-paragraph:last-child {
+          margin-bottom: 0;
+        }
+        .rich-text-content .editor-quote {
+          margin: 0 0 10px 20px;
+          padding-left: 16px;
+          border-left: 4px solid #ccc;
+          font-style: italic;
+          line-height: 1.5;
+        }
+        .rich-text-content .editor-heading1 {
+          font-size: 24px;
+          color: rgb(5, 5, 5);
+          font-weight: 400;
+          margin: 0 0 12px 0;
+          padding: 0;
+          line-height: 1.3;
+        }
+        .rich-text-content .editor-heading2 {
+          font-size: 20px;
+          color: rgb(101, 103, 107);
+          font-weight: 700;
+          margin: 10px 0 8px 0;
+          padding: 0;
+          text-transform: uppercase;
+          line-height: 1.3;
+        }
+        .rich-text-content .editor-heading3 {
+          font-size: 18px;
+          color: rgb(101, 103, 107);
+          font-weight: 700;
+          margin: 10px 0 8px 0;
+          padding: 0;
+          text-transform: uppercase;
+          line-height: 1.3;
+        }
+        .rich-text-content .editor-list-ol {
+          padding: 0;
+          margin: 0 0 8px 0;
+          padding-left: 24px;
+          line-height: 1.5;
+          list-style-type: decimal;
+        }
+        .rich-text-content .editor-list-ul {
+          padding: 0;
+          margin: 0 0 8px 0;
+          padding-left: 24px;
+          line-height: 1.5;
+          list-style-type: disc;
+        }
+        .rich-text-content .editor-listitem {
+          margin: 2px 0;
+          line-height: 1.5;
+          display: list-item;
+        }
+        .rich-text-content .editor-nested-listitem {
+          list-style-type: none;
+        }
+        .rich-text-content .editor-text-bold {
+          font-weight: bold;
+        }
+        .rich-text-content .editor-text-italic {
+          font-style: italic;
+        }
+        .rich-text-content .editor-text-underline {
+          text-decoration: underline;
+        }
+        .rich-text-content .editor-link {
+          color: rgb(33, 111, 219);
+          text-decoration: none;
+        }
+        .rich-text-content .editor-link:hover {
+          text-decoration: underline;
+        }
+      `}</style>
     </div>
   );
 } 

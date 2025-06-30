@@ -16,6 +16,8 @@ export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [newCategory, setNewCategory] = useState({ name: '' });
   const [isLoading, setIsLoading] = useState(true);
+  const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
+  const [editingCategoryName, setEditingCategoryName] = useState('');
 
   useEffect(() => {
     fetchCategories();
@@ -32,6 +34,39 @@ export default function CategoriesPage() {
       console.error(err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleEdit = (category: Category) => {
+    setEditingCategoryId(category.id);
+    setEditingCategoryName(category.name);
+  };
+
+  const handleCancel = () => {
+    setEditingCategoryId(null);
+    setEditingCategoryName('');
+  };
+
+  const handleUpdate = async (id: number) => {
+    const loadingToast = toast.loading('Обновление категории...');
+    try {
+      const res = await fetch(`/api/admin/categories/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: editingCategoryName }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      toast.success('Категория успешно обновлена', { id: loadingToast });
+      setEditingCategoryId(null);
+      setEditingCategoryName('');
+      fetchCategories();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Ошибка при обновлении категории', { id: loadingToast });
     }
   };
 
@@ -161,18 +196,52 @@ export default function CategoriesPage() {
                               {category.id}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {category.name}
+                              {editingCategoryId === category.id ? (
+                                <input
+                                  type="text"
+                                  value={editingCategoryName}
+                                  onChange={(e) => setEditingCategoryName(e.target.value)}
+                                  className="border-gray-300 rounded-md shadow-sm p-1"
+                                />
+                              ) : (
+                                category.name
+                              )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {category.productCount || 0}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <button
-                                onClick={() => handleDelete(category.id)}
-                                className="text-red-600 hover:text-red-900"
-                              >
-                                Удалить
-                              </button>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                              {editingCategoryId === category.id ? (
+                                <>
+                                  <button
+                                    onClick={() => handleUpdate(category.id)}
+                                    className="text-indigo-600 hover:text-indigo-900"
+                                  >
+                                    Сохранить
+                                  </button>
+                                  <button
+                                    onClick={handleCancel}
+                                    className="text-gray-600 hover:text-gray-900"
+                                  >
+                                    Отмена
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => handleEdit(category)}
+                                    className="text-indigo-600 hover:text-indigo-900"
+                                  >
+                                    Редактировать
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(category.id)}
+                                    className="text-red-600 hover:text-red-900"
+                                  >
+                                    Удалить
+                                  </button>
+                                </>
+                              )}
                             </td>
                           </tr>
                         ))}

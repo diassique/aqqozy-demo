@@ -12,6 +12,7 @@ interface Product {
   slug: string;
   description: string;
   price: number;
+  priceIsFrom: boolean;
   imageUrl: string;
   categoryId: number;
   category: {
@@ -89,6 +90,7 @@ export const NewProductsSection = () => {
                   name={product.name}
                   slug={product.slug}
                   price={product.price}
+                  priceIsFrom={product.priceIsFrom}
                   imageUrl={product.imageUrl}
                   images={product.images}
                   category={product.category}

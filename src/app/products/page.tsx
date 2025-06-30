@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { ChevronRight, Grid2X2, List, Filter, X } from 'lucide-react';
+import { ChevronRight, Grid2X2, List, Filter, X, Loader as LoaderIcon } from 'lucide-react';
 import { ProductCard } from '@/app/components/ProductCard';
 import { FullPageLoader } from '@/app/components/Loader';
 import Image from 'next/image';
@@ -20,6 +20,7 @@ interface Product {
   slug: string;
   description: string;
   price: number;
+  priceIsFrom: boolean;
   imageUrl: string;
   categoryId: number;
   category: Category;
@@ -33,8 +34,64 @@ interface Product {
   status: string;
 }
 
+const Pagination = ({ currentPage, totalPages, onPageChange }: { currentPage: number, totalPages: number, onPageChange: (page: number) => void }) => {
+  const pages = [];
+  const delta = 2;
+  const left = currentPage - delta;
+  const right = currentPage + delta + 1;
+  const range: number[] = [];
+  let l: number | undefined;
+
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= left && i < right)) {
+      range.push(i);
+    }
+  }
+
+  for (const i of range) {
+    if (l) {
+      if (i - l === 2) {
+        pages.push(<span key={`ellipsis-start-${i}`} className="px-4 py-2">{l + 1}</span>);
+      } else if (i - l !== 1) {
+        pages.push(<span key={`ellipsis-end-${i}`} className="px-4 py-2">...</span>);
+      }
+    }
+    pages.push(
+      <button
+        key={i}
+        onClick={() => onPageChange(i)}
+        className={`px-4 py-2 mx-1 rounded-lg ${currentPage === i ? 'bg-[#76B852] text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
+      >
+        {i}
+      </button>
+    );
+    l = i;
+  }
+
+  return (
+    <div className="flex justify-center items-center mt-8">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="px-4 py-2 mx-1 rounded-lg bg-white text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Назад
+      </button>
+      {pages}
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="px-4 py-2 mx-1 rounded-lg bg-white text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Вперед
+      </button>
+    </div>
+  );
+};
+
 export default function ProductsPage() {
-  const [loading, setLoading] = useState<boolean>(true);
+  const [initialLoading, setInitialLoading] = useState<boolean>(true);
+  const [productsLoading, setProductsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -42,21 +99,45 @@ export default function ProductsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 6000000]);
   const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalProducts, setTotalProducts] = useState(0);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await fetch('/api/admin/products');
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
-        console.log('Fetched products:', data);
-        setProducts(data);
-      } catch (err) {
-        setError('Ошибка при загрузке товаров');
-        console.error(err);
+  const fetchProducts = useCallback(async (page: number, isInitialLoad = false) => {
+    if (!isInitialLoad) {
+        setProductsLoading(true);
+    }
+    setError(null);
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: '12',
+        category: selectedCategory,
+        minPrice: priceRange[0].toString(),
+        maxPrice: priceRange[1].toString(),
+      });
+      const res = await fetch(`/api/admin/products?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Ошибка при загрузке товаров');
+      
+      setProducts(data.products);
+      setTotalPages(data.totalPages);
+      setTotalProducts(data.total);
+    } catch (err: any) {
+      setError(err.message);
+      console.error(err);
+    } finally {
+      if(isInitialLoad) {
+        setInitialLoading(false);
       }
-    };
+      setProductsLoading(false);
+    }
+  }, [selectedCategory, priceRange]);
 
+  // Effect for initial category loading and first product fetch
+  useEffect(() => {
+    fetchProducts(1, true);
+    
     const fetchCategories = async () => {
       try {
         const res = await fetch('/api/admin/categories');
@@ -64,16 +145,30 @@ export default function ProductsPage() {
         if (!res.ok) throw new Error(data.error);
         setCategories(data);
       } catch (err) {
-        setError('Ошибка при загрузке категорий');
-        console.error(err);
-      } finally {
-        setLoading(false);
+        console.error('Ошибка при загрузке категорий:', err);
       }
     };
-
-    fetchProducts();
     fetchCategories();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Effect for handling filters change
+  useEffect(() => {
+    if (initialLoading) return;
+    if (currentPage !== 1) {
+        setCurrentPage(1);
+    } else {
+        fetchProducts(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategory, priceRange]);
+  
+  // Effect for refetching when page changes
+  useEffect(() => {
+    if (initialLoading) return;
+    fetchProducts(currentPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
 
   // Only one resize handler - improved version
   useEffect(() => {
@@ -83,7 +178,6 @@ export default function ProductsPage() {
       const wasOnMobile = isMobile;
       isMobile = window.innerWidth < 1024;
       
-      // Only close filters when transitioning from mobile to desktop
       if (wasOnMobile && !isMobile) {
         setShowFilters(false);
       }
@@ -93,20 +187,14 @@ export default function ProductsPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const filteredProducts = products.filter((product) => {
-    const matchesCategory = selectedCategory === 'all' || product.category.slug === selectedCategory;
-    const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
-    console.log('Filtering product:', {
-      product,
-      matchesCategory,
-      matchesPrice,
-      selectedCategory,
-      priceRange
-    });
-    return matchesCategory && matchesPrice;
-  });
+  const handlePageChange = (page: number) => {
+    if (page > 0 && page <= totalPages && page !== currentPage) {
+      setCurrentPage(page);
+      window.scrollTo(0, 0);
+    }
+  };
 
-  if (loading) {
+  if (initialLoading) {
     return <FullPageLoader />;
   }
 
@@ -224,7 +312,7 @@ export default function ProductsPage() {
               </div>
 
               {/* Categories */}
-              <div>
+              <div className="mb-6">
                 <h3 className="text-lg font-medium mb-4">Категории</h3>
                 <div className="space-y-3">
                   <label className="flex items-center justify-between group cursor-pointer">
@@ -249,9 +337,6 @@ export default function ProductsPage() {
                         Все категории
                       </span>
                     </div>
-                    <span className="text-sm px-2 py-0.5 bg-gray-100 rounded-md text-gray-600">
-                      {products.length}
-                    </span>
                   </label>
                   {categories.map((category) => (
                     <label key={category.id} className="flex items-center justify-between group cursor-pointer">
@@ -285,44 +370,20 @@ export default function ProductsPage() {
               </div>
 
               {/* Popular Brands */}
-              <div className="mt-8">
+              <div className="mb-6">
                 <h3 className="text-lg font-medium mb-4">Популярные бренды</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-2 gap-2">
-                  <div className="p-3 rounded-lg cursor-pointer hover:opacity-90 transition-opacity bg-white">
-                    <Image
-                      src="/brands/caterpillar.svg"
-                      alt="Caterpillar"
-                      width={150}
-                      height={40}
-                      className="w-full h-auto object-contain"
-                    />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white p-3 rounded-lg border border-gray-200 hover:border-[#76B852] transition-colors cursor-pointer">
+                    <Image src="/brands/caterpillar.png" alt="Caterpillar" width={60} height={30} className="mx-auto" />
                   </div>
-                  <div className="p-3 rounded-lg cursor-pointer hover:opacity-90 transition-opacity bg-white">
-                    <Image
-                      src="/brands/deltaplus.png"
-                      alt="Delta Plus"
-                      width={150}
-                      height={40}
-                      className="w-full h-auto object-contain"
-                    />
+                  <div className="bg-white p-3 rounded-lg border border-gray-200 hover:border-[#76B852] transition-colors cursor-pointer">
+                    <Image src="/brands/stanley.png" alt="Stanley" width={60} height={30} className="mx-auto" />
                   </div>
-                  <div className="p-3 rounded-lg cursor-pointer hover:opacity-90 transition-opacity bg-white">
-                    <Image
-                      src="/brands/stanley.png"
-                      alt="Stanley"
-                      width={150}
-                      height={40}
-                      className="w-full h-auto object-contain"
-                    />
+                  <div className="bg-white p-3 rounded-lg border border-gray-200 hover:border-[#76B852] transition-colors cursor-pointer">
+                    <Image src="/brands/deltaplus.png" alt="Delta Plus" width={60} height={30} className="mx-auto" />
                   </div>
-                  <div className="p-3 rounded-lg cursor-pointer hover:opacity-90 transition-opacity bg-white">
-                    <Image
-                      src="/brands/rodex.png"
-                      alt="Rodex"
-                      width={150}
-                      height={40}
-                      className="w-full h-auto object-contain"
-                    />
+                  <div className="bg-white p-3 rounded-lg border border-gray-200 hover:border-[#76B852] transition-colors cursor-pointer">
+                    <Image src="/brands/rodex.png" alt="Rodex" width={60} height={30} className="mx-auto" />
                   </div>
                 </div>
               </div>
@@ -334,100 +395,84 @@ export default function ProductsPage() {
                   setPriceRange([0, 6000000]);
                   if (showFilters) setShowFilters(false);
                 }}
-                className="mt-8 w-full py-2.5 px-4 border border-gray-200 rounded-lg text-gray-600 hover:text-[#E75825] hover:border-[#E75825] transition-colors duration-300 text-sm font-medium"
+                className="w-full py-2 px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 Сбросить фильтры
               </button>
             </div>
           </div>
-
-          {/* Products Grid */}
-          <div className="flex-1">
-            {/* Toolbar - Desktop */}
-            <div className="hidden lg:flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold">Каталог товаров</h1>
-                <span className="text-sm text-gray-500 mt-1">
-                  {filteredProducts.length} товаров
+          
+          {/* Main content */}
+          <main className="flex-1">
+            {/* Top bar with view mode switcher */}
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="hidden lg:block text-2xl font-bold">Каталог товаров</h1>
+              <div className="flex items-center gap-4 w-full lg:w-auto justify-between lg:justify-end">
+                <span className="text-sm text-gray-500">
+                  Показано {products.length} из {totalProducts} товаров
                 </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded ${
-                    viewMode === 'grid' ? 'bg-gray-100' : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <Grid2X2 className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 rounded ${
-                    viewMode === 'list' ? 'bg-gray-100' : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <List className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Mobile Product Count and View Mode */}
-            <div className="lg:hidden flex items-center justify-between mb-4">
-              <span className="text-sm text-gray-500">
-                {filteredProducts.length} товаров
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded ${
-                    viewMode === 'grid' ? 'bg-gray-100' : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <Grid2X2 className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 rounded ${
-                    viewMode === 'list' ? 'bg-gray-100' : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <List className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`p-2 rounded-lg ${
+                      viewMode === 'grid'
+                        ? 'bg-[#76B852] text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                    }`}
+                    aria-label="Grid view"
+                  >
+                    <Grid2X2 className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`p-2 rounded-lg ${
+                      viewMode === 'list'
+                        ? 'bg-[#76B852] text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                    }`}
+                    aria-label="List view"
+                  >
+                    <List className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             </div>
 
-            {error && (
-              <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-6">
-                {error}
+            {productsLoading ? (
+              <div className="flex justify-center items-center h-96">
+                 <LoaderIcon className="w-10 h-10 animate-spin text-[#E75825]" />
               </div>
-            )}
-
-            {filteredProducts.length === 0 ? (
-              <div className="text-center text-gray-500 py-12">
-                Товары не найдены
-              </div>
+            ) : error ? (
+              <div className="text-center text-red-500 bg-red-100 p-4 rounded-lg">{error}</div>
+            ) : products.length > 0 ? (
+              <>
+                <div
+                  className={`grid ${
+                    viewMode === 'grid'
+                      ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4'
+                      : 'grid-cols-1 gap-4'
+                  }`}
+                >
+                  {products.map((product) => (
+                    <ProductCard key={product.id} {...product} viewMode={viewMode} />
+                  ))}
+                </div>
+                {totalPages > 1 && (
+                    <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    />
+                )}
+              </>
             ) : (
-              <div className={`grid gap-6 ${
-                viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'
-              }`}>
-                {filteredProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    name={product.name}
-                    slug={product.slug}
-                    price={product.price}
-                    imageUrl={product.imageUrl}
-                    images={product.images || []}
-                    category={product.category}
-                    description={product.description}
-                    viewMode={viewMode}
-                    isNew={product.isNew}
-                    status={product.status}
-                  />
-                ))}
+              <div className="text-center py-16">
+                 <Image src="/images/not-found.svg" alt="Не найдено" width={150} height={150} className="mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Товары не найдены</h3>
+                <p className="text-gray-500">Попробуйте изменить фильтры или сбросить их.</p>
               </div>
             )}
-          </div>
+          </main>
         </div>
       </div>
     </div>
