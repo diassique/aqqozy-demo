@@ -55,9 +55,9 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { name, phone, message } = body;
+    const { name, phone, message, timestamp } = body;
     
-    console.log('📝 Получены данные формы:', { name, phone, messageLength: message?.length });
+    console.log('📝 Получены данные формы:', { name, phone, messageLength: message?.length, timestamp });
 
     // Валидация входных данных
     if (!name || !phone || !message) {
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
 <blockquote>${message}</blockquote>
 
 ⏰ <b>Время получения:</b>
-<i>${new Date().toLocaleString()}</i>
+<i>${timestamp || new Date().toLocaleString('ru-RU')}</i>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
