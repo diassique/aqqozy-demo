@@ -4,10 +4,11 @@ import { turso } from '@/lib/turso';
 
 export async function PUT(
   request: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = context.params;
+    const params = await context.params;
+    const { id } = params;
     const categoryId = parseInt(id, 10);
     const body = await request.json();
     const { name } = body;
@@ -40,10 +41,11 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = context.params;
+    const params = await context.params;
+    const { id } = params;
     const categoryId = parseInt(id, 10);
 
     // Check if category has products
