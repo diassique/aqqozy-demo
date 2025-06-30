@@ -18,6 +18,12 @@ enum ProductStatus {
   DISCONTINUED = 'DISCONTINUED'
 }
 
+enum SaleType {
+  RETAIL_ONLY = 'RETAIL_ONLY',
+  WHOLESALE_ONLY = 'WHOLESALE_ONLY',
+  BOTH = 'BOTH'
+}
+
 interface Category {
   id: number;
   name: string;
@@ -59,6 +65,7 @@ interface FormData {
   manufacturer: string;
   metaTitle: string;
   metaDescription: string;
+  saleType: SaleType;
 }
 
 export default function EditProductPage({ params }: PageProps) {
@@ -89,6 +96,7 @@ export default function EditProductPage({ params }: PageProps) {
     manufacturer: '',
     metaTitle: '',
     metaDescription: '',
+    saleType: SaleType.BOTH,
   });
 
   useEffect(() => {
@@ -133,6 +141,7 @@ export default function EditProductPage({ params }: PageProps) {
           manufacturer: product.manufacturer || '',
           metaTitle: product.metaTitle || '',
           metaDescription: product.metaDescription || '',
+          saleType: product.saleType || SaleType.BOTH,
         });
       } catch (err) {
         toast.error('Ошибка при загрузке товара');
@@ -328,6 +337,22 @@ export default function EditProductPage({ params }: PageProps) {
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"
                         min="0"
                       />
+                    </div>
+
+                    <div>
+                      <label htmlFor="saleType" className="block text-sm font-medium text-gray-700 mb-1">
+                        Тип продажи
+                      </label>
+                      <select
+                        id="saleType"
+                        value={formData.saleType}
+                        onChange={(e) => setFormData({ ...formData, saleType: e.target.value as SaleType })}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"
+                      >
+                        <option value={SaleType.RETAIL_ONLY}>Только в розницу</option>
+                        <option value={SaleType.WHOLESALE_ONLY}>Только оптом</option>
+                        <option value={SaleType.BOTH}>Оптом и в розницу</option>
+                      </select>
                     </div>
                   </div>
                 </div>

@@ -31,6 +31,7 @@ CREATE TABLE Product (
   manufacturer TEXT,
   metaTitle TEXT,
   metaDescription TEXT,
+  saleType TEXT NOT NULL DEFAULT 'BOTH', -- RETAIL_ONLY, WHOLESALE_ONLY, BOTH
   FOREIGN KEY (categoryId) REFERENCES Category(id)
 );
 

@@ -28,6 +28,7 @@ interface Product {
   }[];
   isNew: boolean;
   status: string;
+  saleType: string;
 }
 
 export const NewProductsSection = () => {
@@ -41,7 +42,7 @@ export const NewProductsSection = () => {
         const res = await fetch('/api/admin/products?limit=4&sort=latest');
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
-        setProducts(data);
+        setProducts(data.products || []);
       } catch (err) {
         console.error('Error fetching latest products:', err);
       } finally {
@@ -98,6 +99,7 @@ export const NewProductsSection = () => {
                   viewMode="grid"
                   isNew={product.isNew}
                   status={product.status}
+                  saleType={product.saleType}
                 />
               </div>
             ))}

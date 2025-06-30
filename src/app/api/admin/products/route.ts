@@ -11,6 +11,10 @@ export async function GET(request: Request) {
     const minPrice = searchParams.get('minPrice') ? parseInt(searchParams.get('minPrice') as string, 10) : undefined;
     const maxPrice = searchParams.get('maxPrice') ? parseInt(searchParams.get('maxPrice') as string, 10) : undefined;
     const sort = searchParams.get('sort') || 'latest';
+    const isNew = searchParams.get('isNew') === 'true' ? true : undefined;
+    const saleType = searchParams.get('saleType') || undefined;
+    const manufacturer = searchParams.get('manufacturer') || undefined;
+    const status = searchParams.get('status') || undefined;
 
     const result = await getProductsWithCount({
       page,
@@ -19,6 +23,10 @@ export async function GET(request: Request) {
       minPrice,
       maxPrice,
       sort,
+      isNew,
+      saleType,
+      manufacturer,
+      status,
     });
     
     return NextResponse.json(result);
@@ -36,7 +44,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, description, price, priceIsFrom, images, categoryId } = body;
+    const { name, description, price, priceIsFrom, images, categoryId, saleType } = body;
 
     if (!name || !price || !categoryId) {
       return NextResponse.json(
@@ -52,6 +60,7 @@ export async function POST(request: Request) {
       priceIsFrom: priceIsFrom || false,
       categoryId,
       images: images || [],
+      saleType: saleType || 'BOTH',
     });
 
     return NextResponse.json(product);

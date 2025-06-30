@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { ChevronRight, Grid2X2, List, Filter, X, Loader as LoaderIcon } from 'lucide-react';
+import { ChevronRight, Grid2X2, List, Filter, X, Loader as LoaderIcon, ChevronDown, Check } from 'lucide-react';
 import { ProductCard } from '@/app/components/ProductCard';
 import { FullPageLoader } from '@/app/components/Loader';
 import Image from 'next/image';
@@ -32,6 +32,7 @@ interface Product {
   }[];
   isNew: boolean;
   status: string;
+  saleType: string;
 }
 
 const Pagination = ({ currentPage, totalPages, onPageChange }: { currentPage: number, totalPages: number, onPageChange: (page: number) => void }) => {
@@ -102,6 +103,15 @@ export default function ProductsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalProducts, setTotalProducts] = useState(0);
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  const [isNewOnly, setIsNewOnly] = useState(false);
+  const [selectedSaleType, setSelectedSaleType] = useState('all');
+  const [selectedManufacturer, setSelectedManufacturer] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [manufacturers, setManufacturers] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState('latest');
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchProducts = useCallback(async (page: number, isInitialLoad = false) => {
     if (!isInitialLoad) {
@@ -115,7 +125,24 @@ export default function ProductsPage() {
         category: selectedCategory,
         minPrice: priceRange[0].toString(),
         maxPrice: priceRange[1].toString(),
+        sort: sortBy,
       });
+      
+      if (isNewOnly) {
+        params.append('isNew', 'true');
+      }
+      
+      if (selectedSaleType !== 'all') {
+        params.append('saleType', selectedSaleType);
+      }
+      
+      if (selectedManufacturer !== 'all') {
+        params.append('manufacturer', selectedManufacturer);
+      }
+      
+      if (selectedStatus !== 'all') {
+        params.append('status', selectedStatus);
+      }
       const res = await fetch(`/api/admin/products?${params.toString()}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка при загрузке товаров');
@@ -132,7 +159,7 @@ export default function ProductsPage() {
       }
       setProductsLoading(false);
     }
-  }, [selectedCategory, priceRange]);
+  }, [selectedCategory, priceRange, isNewOnly, selectedSaleType, selectedManufacturer, selectedStatus, sortBy]);
 
   // Effect for initial category loading and first product fetch
   useEffect(() => {
@@ -148,7 +175,20 @@ export default function ProductsPage() {
         console.error('Ошибка при загрузке категорий:', err);
       }
     };
+    
+    const fetchManufacturers = async () => {
+      try {
+        const res = await fetch('/api/manufacturers');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        setManufacturers(data);
+      } catch (err) {
+        console.error('Ошибка при загрузке производителей:', err);
+      }
+    };
+    
     fetchCategories();
+    fetchManufacturers();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -161,7 +201,7 @@ export default function ProductsPage() {
         fetchProducts(1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCategory, priceRange]);
+  }, [selectedCategory, priceRange, isNewOnly, selectedSaleType, selectedManufacturer, selectedStatus, sortBy]);
   
   // Effect for refetching when page changes
   useEffect(() => {
@@ -185,6 +225,18 @@ export default function ProductsPage() {
     
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Close sort dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setSortDropdownOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handlePageChange = (page: number) => {
@@ -311,6 +363,40 @@ export default function ProductsPage() {
                 </div>
               </div>
 
+              {/* Sort Options - Mobile Only */}
+              <div className="mb-6 lg:hidden">
+                <h3 className="text-lg font-medium mb-4">Сортировка</h3>
+                <div className="space-y-3">
+                  {[
+                    { value: 'latest', label: 'Сначала новые'},
+                    { value: 'price-asc', label: 'Цена: по возрастанию'},
+                    { value: 'price-desc', label: 'Цена: по убыванию'}
+                  ].map((option) => (
+                    <label key={option.value} className="flex items-center group cursor-pointer">
+                      <input
+                        type="radio"
+                        name="sort"
+                        value={option.value}
+                        checked={sortBy === option.value}
+                        onChange={(e) => {
+                          setSortBy(e.target.value);
+                          if (showFilters) setShowFilters(false);
+                        }}
+                        className="hidden"
+                      />
+                      <div className={`w-2 h-2 rounded-full mr-3 ${
+                        sortBy === option.value ? 'bg-[#76B852]' : 'bg-gray-300'
+                      }`}></div>
+                      <span className={`text-[15px] transition-colors ${
+                        sortBy === option.value ? 'text-[#76B852] font-medium' : 'text-gray-700 group-hover:text-[#76B852]'
+                      }`}>
+                        {option.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               {/* Categories */}
               <div className="mb-6">
                 <h3 className="text-lg font-medium mb-4">Категории</h3>
@@ -338,7 +424,7 @@ export default function ProductsPage() {
                       </span>
                     </div>
                   </label>
-                  {categories.map((category) => (
+                  {(showAllCategories ? categories : categories.slice(0, 6)).map((category) => (
                     <label key={category.id} className="flex items-center justify-between group cursor-pointer">
                       <div className="flex items-center">
                         <input
@@ -366,6 +452,14 @@ export default function ProductsPage() {
                       </span>
                     </label>
                   ))}
+                  {categories.length > 6 && (
+                    <button
+                      onClick={() => setShowAllCategories(!showAllCategories)}
+                      className="w-full text-left text-[15px] text-[#3B82F6] hover:text-[#2563eb] transition-colors py-1"
+                    >
+                      {showAllCategories ? 'Скрыть' : `Показать все (${categories.length})`}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -388,11 +482,133 @@ export default function ProductsPage() {
                 </div>
               </div>
 
+              {/* New Products Filter */}
+              <div className="mb-6">
+                <h3 className="text-lg font-medium mb-4">Товары</h3>
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isNewOnly}
+                    onChange={(e) => {
+                      setIsNewOnly(e.target.checked);
+                      if (showFilters) setShowFilters(false);
+                    }}
+                    className="hidden"
+                  />
+                  <div className={`w-5 h-5 border-2 rounded mr-3 flex items-center justify-center ${
+                    isNewOnly ? 'bg-[#76B852] border-[#76B852]' : 'border-gray-300'
+                  }`}>
+                    {isNewOnly && (
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className="text-[15px] text-gray-700">Только новые товары</span>
+                </label>
+              </div>
+
+              {/* Sale Type Filter */}
+              <div className="mb-6">
+                <h3 className="text-lg font-medium mb-4">Тип продажи</h3>
+                <div className="space-y-3">
+                  {[
+                    { value: 'all', label: 'Все типы' },
+                    { value: 'WHOLESALE_ONLY', label: 'Оптом' },
+                    { value: 'RETAIL_ONLY', label: 'В розницу' },
+                    { value: 'BOTH', label: 'Оптом и в розницу' }
+                  ].map((option) => (
+                    <label key={option.value} className="flex items-center group cursor-pointer">
+                      <input
+                        type="radio"
+                        name="saleType"
+                        value={option.value}
+                        checked={selectedSaleType === option.value}
+                        onChange={(e) => {
+                          setSelectedSaleType(e.target.value);
+                          if (showFilters) setShowFilters(false);
+                        }}
+                        className="hidden"
+                      />
+                      <div className={`w-2 h-2 rounded-full mr-3 ${
+                        selectedSaleType === option.value ? 'bg-[#76B852]' : 'bg-gray-300'
+                      }`}></div>
+                      <span className={`text-[15px] transition-colors ${
+                        selectedSaleType === option.value ? 'text-[#76B852] font-medium' : 'text-gray-700 group-hover:text-[#76B852]'
+                      }`}>
+                        {option.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Manufacturer Filter */}
+              {manufacturers.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-medium mb-4">Производитель</h3>
+                  <select
+                    value={selectedManufacturer}
+                    onChange={(e) => {
+                      setSelectedManufacturer(e.target.value);
+                      if (showFilters) setShowFilters(false);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-700 focus:border-[#76B852] focus:outline-none"
+                  >
+                    <option value="all">Все производители</option>
+                    {manufacturers.map((manufacturer) => (
+                      <option key={manufacturer} value={manufacturer}>
+                        {manufacturer}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Status Filter */}
+              <div className="mb-6">
+                <h3 className="text-lg font-medium mb-4">Наличие</h3>
+                <div className="space-y-3">
+                  {[
+                    { value: 'all', label: 'Все товары' },
+                    { value: 'IN_STOCK', label: 'В наличии' },
+                    { value: 'OUT_OF_STOCK', label: 'Нет в наличии' },
+                  ].map((option) => (
+                    <label key={option.value} className="flex items-center group cursor-pointer">
+                      <input
+                        type="radio"
+                        name="status"
+                        value={option.value}
+                        checked={selectedStatus === option.value}
+                        onChange={(e) => {
+                          setSelectedStatus(e.target.value);
+                          if (showFilters) setShowFilters(false);
+                        }}
+                        className="hidden"
+                      />
+                      <div className={`w-2 h-2 rounded-full mr-3 ${
+                        selectedStatus === option.value ? 'bg-[#76B852]' : 'bg-gray-300'
+                      }`}></div>
+                      <span className={`text-[15px] transition-colors ${
+                        selectedStatus === option.value ? 'text-[#76B852] font-medium' : 'text-gray-700 group-hover:text-[#76B852]'
+                      }`}>
+                        {option.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               {/* Reset Filters Button */}
               <button
                 onClick={() => {
                   setSelectedCategory('all');
                   setPriceRange([0, 6000000]);
+                  setIsNewOnly(false);
+                  setSelectedSaleType('all');
+                  setSelectedManufacturer('all');
+                  setSelectedStatus('all');
+                  setSortBy('latest');
                   if (showFilters) setShowFilters(false);
                 }}
                 className="w-full py-2 px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
@@ -411,29 +627,71 @@ export default function ProductsPage() {
                 <span className="text-sm text-gray-500">
                   Показано {products.length} из {totalProducts} товаров
                 </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-2 rounded-lg ${
-                      viewMode === 'grid'
-                        ? 'bg-[#76B852] text-white'
-                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-                    }`}
-                    aria-label="Grid view"
-                  >
-                    <Grid2X2 className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`p-2 rounded-lg ${
-                      viewMode === 'list'
-                        ? 'bg-[#76B852] text-white'
-                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-                    }`}
-                    aria-label="List view"
-                  >
-                    <List className="w-5 h-5" />
-                  </button>
+                <div className="flex items-center gap-3">
+                  {/* Custom Sort Dropdown - Desktop Only */}
+                  <div className="relative hidden lg:block" ref={sortDropdownRef}>
+                    <button
+                      onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
+                      className="flex items-center justify-between px-4 py-2.5 min-w-[180px] border border-gray-200 rounded-lg bg-white text-gray-700 text-sm hover:border-[#76B852] focus:border-[#76B852] focus:outline-none transition-all duration-200"
+                    >
+                      <span className="font-medium">
+                        {sortBy === 'latest' && 'Сначала новые'}
+                        {sortBy === 'price-asc' && 'Цена: по возрастанию'}
+                        {sortBy === 'price-desc' && 'Цена: по убыванию'}
+                      </span>
+                      <ChevronDown className={`w-4 h-4 ml-3 transition-transform duration-200 ${sortDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {sortDropdownOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg z-50 py-1">
+                        {[
+                          { value: 'latest', label: 'Сначала новые'},
+                          { value: 'price-asc', label: 'Цена: по возрастанию'},
+                          { value: 'price-desc', label: 'Цена: по убыванию'}
+                        ].map((option) => (
+                          <button
+                            key={option.value}
+                            onClick={() => {
+                              setSortBy(option.value);
+                              setSortDropdownOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-4 py-3 text-sm hover:bg-gray-50 transition-colors ${
+                              sortBy === option.value ? 'bg-[#76B852]/5 text-[#76B852]' : 'text-gray-700'
+                            }`}
+                          >
+                            <span className="font-medium">{option.label}</span>
+                            {sortBy === option.value && (
+                              <Check className="w-4 h-4 text-[#76B852]" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setViewMode('grid')}
+                      className={`p-2 rounded-lg ${
+                        viewMode === 'grid'
+                          ? 'bg-[#76B852] text-white'
+                          : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                      }`}
+                      aria-label="Grid view"
+                    >
+                      <Grid2X2 className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setViewMode('list')}
+                      className={`p-2 rounded-lg ${
+                        viewMode === 'list'
+                          ? 'bg-[#76B852] text-white'
+                          : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                      }`}
+                      aria-label="List view"
+                    >
+                      <List className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -449,8 +707,8 @@ export default function ProductsPage() {
                 <div
                   className={`grid ${
                     viewMode === 'grid'
-                      ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4'
-                      : 'grid-cols-1 gap-4'
+                      ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2'
+                      : 'grid-cols-1 gap-2'
                   }`}
                 >
                   {products.map((product) => (
@@ -467,7 +725,6 @@ export default function ProductsPage() {
               </>
             ) : (
               <div className="text-center py-16">
-                 <Image src="/images/not-found.svg" alt="Не найдено" width={150} height={150} className="mx-auto mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Товары не найдены</h3>
                 <p className="text-gray-500">Попробуйте изменить фильтры или сбросить их.</p>
               </div>

@@ -68,7 +68,6 @@ export const Header = () => {
             
             <div className="hidden lg:flex items-center gap-6 text-sm font-medium">
               <Link href="/about" className="text-gray-600 hover:text-[#E75825] transition-colors">О нас</Link>
-              <Link href="/delivery" className="text-gray-600 hover:text-[#E75825] transition-colors">Доставка</Link>
               <Link href="/contacts" className="text-gray-600 hover:text-[#E75825] transition-colors">Контакты</Link>
             </div>
 

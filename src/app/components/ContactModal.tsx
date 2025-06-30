@@ -265,10 +265,10 @@ export const ContactModal = ({ isOpen, onClose }: ContactModalProps) => {
                     </div>
 
                     <p className="text-xs text-gray-500 text-center mt-4">
-                      Нажимая кнопку «Отправить сообщение», вы соглашаетесьddddd с нашей{' '}
-                      <p className="text-[#fa5a20] hover:underline">
+                      Нажимая кнопку «Отправить сообщение», вы соглашаетесь с нашей{' '}
+                      <span className="text-[#fa5a20] hover:underline cursor-pointer">
                         политикой конфиденциальности
-                      </p>
+                      </span>
                     </p>
                   </form>
                 )}

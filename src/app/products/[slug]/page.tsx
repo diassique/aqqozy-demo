@@ -8,6 +8,7 @@ import { FullPageLoader } from '@/app/components/Loader';
 import Zoom from 'react-medium-image-zoom';
 import 'react-medium-image-zoom/dist/styles.css';
 import ReturnPolicyModal from '@/app/components/ReturnPolicyModal';
+import { ContactModal } from '@/app/components/ContactModal';
 import { Toaster, toast } from 'react-hot-toast';
 
 interface Product {
@@ -41,9 +42,22 @@ interface Product {
   };
   quantity?: number;
   status?: string;
+  saleType?: string;
 }
 
 const BLANK_IMAGE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+const getSaleTypeText = (saleType?: string) => {
+  switch (saleType) {
+    case 'RETAIL_ONLY':
+      return 'Только в розницу';
+    case 'WHOLESALE_ONLY':
+      return 'Только оптом';
+    case 'BOTH':
+    default:
+      return 'Розница + Опт';
+  }
+};
 
 export default function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = use(params);
@@ -53,6 +67,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'description' | 'additional'>('description');
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -222,6 +237,10 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                       <span className="text-gray-900">{product.sku}</span>
                     </div>
                   )}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center py-2 border-b border-gray-100">
+                    <span className="text-gray-600 w-full sm:w-1/3 mb-1 sm:mb-0">Тип продажи</span>
+                    <span className="text-gray-900">{getSaleTypeText(product.saleType)}</span>
+                  </div>
                   {(product.weight || product.weight === 0) && (
                     <div className="flex flex-col sm:flex-row items-start sm:items-center py-2 border-b border-gray-100">
                       <span className="text-gray-600 w-full sm:w-1/3 mb-1 sm:mb-0">Вес</span>
@@ -283,13 +302,19 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               </div>
 
               <div className="space-y-4">
-                <button className="w-full bg-[#1e3a8a] text-white py-3 px-6 rounded-lg font-medium hover:bg-[#1e3a8a]/90 transition-colors">
+                <button 
+                  onClick={() => setIsContactModalOpen(true)}
+                  className="w-full bg-[#1e3a8a] text-white py-3 px-6 rounded-lg font-medium hover:bg-[#1e3a8a]/90 transition-colors"
+                >
                   Купить сейчас
                 </button>
-                <div className="flex items-center gap-2 text-gray-500">
+                <button
+                  onClick={() => setIsContactModalOpen(true)}
+                  className="flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors cursor-pointer"
+                >
                   <HelpCircle size={20} />
                   <span className="text-[16px]">Задайте нам вопрос</span>
-                </div>
+                </button>
               </div>
 
               {/* Share Section */}
@@ -536,6 +561,10 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
         </div>
       </div>
       <ReturnPolicyModal isOpen={isReturnModalOpen} onClose={() => setIsReturnModalOpen(false)} />
+      <ContactModal 
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+      />
       
       <style jsx global>{`
         .rich-text-content .editor-paragraph {

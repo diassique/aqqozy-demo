@@ -1,18 +1,18 @@
 import { NextResponse } from 'next/server';
 
-// Load and validate environment variables
+// Загрузка и валидация переменных окружения
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
-// Validate environment variables on startup
+// Валидация переменных окружения при запуске
 if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-  console.error('❌ Required environment variables are missing:', {
+  console.error('❌ Отсутствуют обязательные переменные окружения:', {
     TELEGRAM_BOT_TOKEN: !!TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID: !!TELEGRAM_CHAT_ID,
   });
 }
 
-// Common headers for all responses
+// Общие заголовки для всех ответов
 const headers = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -23,7 +23,7 @@ const headers = {
 export async function GET() {
   return NextResponse.json(
     { 
-      error: 'Method not allowed. This endpoint only accepts POST requests.',
+      error: 'Метод не разрешен. Этот эндпоинт принимает только POST запросы.',
       status: 'error'
     },
     { 
@@ -41,8 +41,8 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: Request) {
-  console.log('📨 Received contact form submission');
-  console.log('Environment check:', {
+  console.log('📨 Получена заявка из контактной формы');
+  console.log('Проверка окружения:', {
     NODE_ENV: process.env.NODE_ENV,
     VERCEL_ENV: process.env.VERCEL_ENV,
     hasToken: !!TELEGRAM_BOT_TOKEN,
@@ -51,19 +51,19 @@ export async function POST(req: Request) {
   
   try {
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-      throw new Error('Telegram configuration is missing. Please check environment variables.');
+      throw new Error('Отсутствует конфигурация Telegram. Проверьте переменные окружения.');
     }
 
     const body = await req.json();
     const { name, phone, message } = body;
     
-    console.log('📝 Form data received:', { name, phone, messageLength: message?.length });
+    console.log('📝 Получены данные формы:', { name, phone, messageLength: message?.length });
 
-    // Validate input
+    // Валидация входных данных
     if (!name || !phone || !message) {
-      console.error('❌ Validation failed - missing required fields');
+      console.error('❌ Ошибка валидации - отсутствуют обязательные поля');
       return NextResponse.json(
-        { error: 'Name, phone and message are required' },
+        { error: 'Имя, телефон и сообщение обязательны для заполнения' },
         { 
           status: 400,
           headers
@@ -71,19 +71,28 @@ export async function POST(req: Request) {
       );
     }
 
-    // Format message for Telegram
+    // Форматирование сообщения для Telegram
     const formattedMessage = `
-📬 New Contact Form Submission
+🔔 <b>НОВАЯ ЗАЯВКА С САЙТА</b> 🔔
 
-👤 Name: ${name}
-📞 Phone: ${phone}
-💬 Message: ${message}
-⏰ Time: ${new Date().toLocaleString()}
-🌐 Environment: ${process.env.VERCEL_ENV || process.env.NODE_ENV}
-`;
+👤 <b>Контактное лицо:</b>
+<i>${name}</i>
+
+📞 <b>Номер телефона:</b>
+<code>${phone}</code>
+
+💬 <b>Сообщение от клиента:</b>
+<blockquote>${message}</blockquote>
+
+⏰ <b>Время получения:</b>
+<i>${new Date().toLocaleString()}</i>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ <b>Требуется обработка заявки!</b>`;
 
     try {
-      console.log('🚀 Attempting to send message to Telegram...');
+      console.log('🚀 Попытка отправки сообщения в Telegram...');
       const telegramUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
       
       const telegramResponse = await fetch(telegramUrl, {
@@ -99,7 +108,7 @@ export async function POST(req: Request) {
       });
 
       const responseText = await telegramResponse.text();
-      console.log('📬 Telegram API response:', {
+      console.log('📬 Ответ Telegram API:', {
         status: telegramResponse.status,
         ok: telegramResponse.ok,
         response: responseText
@@ -109,7 +118,7 @@ export async function POST(req: Request) {
         throw new Error(responseText);
       }
       
-      console.log('✅ Message sent successfully to Telegram');
+      console.log('✅ Сообщение успешно отправлено в Telegram');
       return NextResponse.json(
         { success: true }, 
         { 
@@ -118,12 +127,12 @@ export async function POST(req: Request) {
         }
       );
     } catch (telegramError) {
-      console.error('❌ Telegram error details:', {
+      console.error('❌ Ошибка Telegram:', {
         error: telegramError.message,
         stack: telegramError.stack
       });
       return NextResponse.json(
-        { error: 'Failed to send message to Telegram. Please try again later.' },
+        { error: 'Не удалось отправить сообщение в Telegram. Попробуйте позже.' },
         { 
           status: 500,
           headers
@@ -131,12 +140,12 @@ export async function POST(req: Request) {
       );
     }
   } catch (error) {
-    console.error('❌ Contact form error:', {
+    console.error('❌ Ошибка контактной формы:', {
       error: error.message,
       stack: error.stack
     });
     return NextResponse.json(
-      { error: error.message || 'Failed to process contact form' },
+      { error: error.message || 'Не удалось обработать контактную форму' },
       { 
         status: 500,
         headers

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, ImageIcon } from 'lucide-react';
+import { Star, ImageIcon, User, Package, Store, MessageCircleQuestion } from 'lucide-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination } from 'swiper/modules';
 import { ContactModal } from './ContactModal';
@@ -34,6 +34,7 @@ interface ProductCardProps {
   viewMode?: 'grid' | 'list';
   status?: string;
   isNew?: boolean;
+  saleType?: string;
 }
 
 export const ProductCard = ({ 
@@ -47,13 +48,20 @@ export const ProductCard = ({
   description, 
   viewMode = 'grid',
   status = 'IN_STOCK',
-  isNew = false
+  isNew = false,
+  saleType = 'BOTH'
 }: ProductCardProps) => {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   
   const allImages = (images && images.length > 0 ? images.map(img => img.url) : (imageUrl ? [imageUrl] : []))
     .filter(url => url && !failedImages.has(url));
+
+  // Function to strip HTML tags and return plain text
+  const stripHtmlTags = (html: string) => {
+    if (!html) return '';
+    return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+  };
 
   const handleImageError = (failedUrl: string) => {
     setFailedImages(prev => new Set([...prev, failedUrl]));
@@ -75,7 +83,32 @@ export const ProductCard = ({
     }
   };
 
+  const getSaleTypeInfo = (saleType: string) => {
+    switch (saleType) {
+      case 'RETAIL_ONLY':
+        return { 
+          text: 'Розница', 
+          icon: <User className="w-3 h-3" />, 
+          className: 'bg-blue-50 text-blue-700 border border-blue-200' 
+        };
+      case 'WHOLESALE_ONLY':
+        return { 
+          text: 'Опт', 
+          icon: <Package className="w-3 h-3" />, 
+          className: 'bg-purple-50 text-purple-700 border border-purple-200' 
+        };
+      case 'BOTH':
+      default:
+        return { 
+          text: 'Розница + Опт', 
+          icon: <Store className="w-3 h-3" />,
+          className: 'bg-green-50 text-green-700 border border-green-200' 
+        };
+    }
+  };
+
   const statusInfo = getStatusText(status);
+  const saleTypeInfo = getSaleTypeInfo(saleType);
 
   const NoImagePlaceholder = () => (
     <div className="w-full h-full flex items-center justify-center bg-gray-100">
@@ -118,8 +151,14 @@ export const ProductCard = ({
             
             <div className="flex-1 py-1 sm:py-2 flex flex-col min-h-28 sm:min-h-48 md:min-h-[200px]">
               <div>
-                <div className="text-sm text-gray-500">
-                  {category?.name || 'Без категории'}
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-sm text-gray-500">
+                    {category?.name || 'Без категории'}
+                  </div>
+                  <div className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${saleTypeInfo.className}`}>
+                    {saleTypeInfo.icon}
+                    <span className="font-medium">{saleTypeInfo.text}</span>
+                  </div>
                 </div>
                 
                 <h3 className="mt-1 sm:mt-2 text-base sm:text-xl font-medium text-gray-900 group-hover:text-[#E75825] transition-colors line-clamp-2 sm:line-clamp-none">
@@ -128,7 +167,7 @@ export const ProductCard = ({
 
                 {description && (
                   <p className="mt-2 sm:mt-3 text-gray-600 line-clamp-2 text-xs sm:text-[14px]">
-                    {description}
+                    {stripHtmlTags(description)}
                   </p>
                 )}
               </div>
@@ -158,8 +197,20 @@ export const ProductCard = ({
                   >
                     Заказать
                   </button>
-                  <div className={`text-left text-xs ${statusInfo.className}`}>
-                    {statusInfo.text}
+                  <div className="flex items-center justify-between">
+                    <div className={`text-left text-xs ${statusInfo.className}`}>
+                      {statusInfo.text}
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setIsContactModalOpen(true);
+                      }}
+                      className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors duration-200"
+                    >
+                      <MessageCircleQuestion className="w-3 h-3" />
+                      <span>Есть вопросы?</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -238,8 +289,14 @@ export const ProductCard = ({
           
           <div className="flex flex-col flex-grow pt-2">
             <div>
-              <div className="text-sm text-gray-500">
-                {category?.name || 'Без категории'}
+              <div className="flex items-center justify-between mb-1">
+                <div className="text-sm text-gray-500">
+                  {category?.name || 'Без категории'}
+                </div>
+                <div className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${saleTypeInfo.className}`}>
+                  {saleTypeInfo.icon}
+                  <span className="font-medium">{saleTypeInfo.text}</span>
+                </div>
               </div>
               
               <h3 className="mt-1 text-[16px] font-medium text-gray-900 line-clamp-2 group-hover:text-[#E75825] transition-colors min-h-[2.75rem]">
@@ -272,8 +329,20 @@ export const ProductCard = ({
                 >
                   Заказать
                 </button>
-                <div className={`text-left text-xs ${statusInfo.className}`}>
-                  {statusInfo.text}
+                <div className="flex items-center justify-between">
+                  <div className={`text-left text-xs ${statusInfo.className}`}>
+                    {statusInfo.text}
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsContactModalOpen(true);
+                    }}
+                    className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors duration-200"
+                  >
+                    <MessageCircleQuestion className="w-3 h-3" />
+                    <span>Есть вопросы?</span>
+                  </button>
                 </div>
               </div>
             </div>

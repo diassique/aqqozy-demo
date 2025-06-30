@@ -32,6 +32,7 @@ export interface Product {
   manufacturer: string | null;
   metaTitle: string | null;
   metaDescription: string | null;
+  saleType: string;
   images?: ProductImage[];
   category?: {
     id: number;
@@ -71,6 +72,16 @@ export interface CompanyInfo {
 export async function getAllCategories(): Promise<Category[]> {
   const { rows } = await turso.execute('SELECT * FROM Category ORDER BY name');
   return rows as unknown as Category[];
+}
+
+export async function getUniqueManufacturers(): Promise<string[]> {
+  const { rows } = await turso.execute(`
+    SELECT DISTINCT manufacturer 
+    FROM Product 
+    WHERE manufacturer IS NOT NULL AND manufacturer != '' 
+    ORDER BY manufacturer
+  `);
+  return rows.map(row => row.manufacturer as string);
 }
 
 export async function getCategoryBySlug(slug: string): Promise<Category | null> {
@@ -243,7 +254,11 @@ export async function getProductsWithCount({
   categorySlug,
   minPrice,
   maxPrice,
-  sort = 'latest'
+  sort = 'latest',
+  isNew,
+  saleType,
+  manufacturer,
+  status
 }: {
   page?: number;
   limit?: number;
@@ -251,6 +266,10 @@ export async function getProductsWithCount({
   minPrice?: number;
   maxPrice?: number;
   sort?: string;
+  isNew?: boolean;
+  saleType?: string;
+  manufacturer?: string;
+  status?: string;
 }) {
   const offset = (page - 1) * limit;
 
@@ -270,6 +289,26 @@ export async function getProductsWithCount({
   if (maxPrice !== undefined) {
     whereClauses += ' AND p.price <= ?';
     queryParams.push(maxPrice);
+  }
+
+  if (isNew !== undefined) {
+    whereClauses += ' AND p.isNew = ?';
+    queryParams.push(isNew);
+  }
+
+  if (saleType && saleType !== 'all') {
+    whereClauses += ' AND p.saleType = ?';
+    queryParams.push(saleType);
+  }
+
+  if (manufacturer && manufacturer !== 'all') {
+    whereClauses += ' AND p.manufacturer = ?';
+    queryParams.push(manufacturer);
+  }
+
+  if (status && status !== 'all') {
+    whereClauses += ' AND p.status = ?';
+    queryParams.push(status);
   }
 
   // First, get the total count of products with filters
@@ -355,6 +394,7 @@ export interface ProductCreateData {
   manufacturer?: string;
   metaTitle?: string;
   metaDescription?: string;
+  saleType?: string;
 }
 
 export async function createProduct(data: ProductCreateData): Promise<Product> {
@@ -367,12 +407,12 @@ export async function createProduct(data: ProductCreateData): Promise<Product> {
       name, slug, description, price, priceIsFrom, imageUrl, categoryId,
       createdAt, updatedAt, status, quantity, isPublished,
       isFeatured, isNew, sku, weight, dimensions, manufacturer,
-      metaTitle, metaDescription
+      metaTitle, metaDescription, saleType
     ) VALUES (
       ?, ?, ?, ?, ?, ?, ?, 
       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, ?, ?,
       ?, ?, ?, ?, ?, ?,
-      ?, ?
+      ?, ?, ?
     ) RETURNING *`,
     args: [
       data.name,
@@ -393,6 +433,7 @@ export async function createProduct(data: ProductCreateData): Promise<Product> {
       data.manufacturer || null,
       data.metaTitle || null,
       data.metaDescription || null,
+      data.saleType || 'BOTH',
     ]
   });
   

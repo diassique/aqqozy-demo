@@ -7,6 +7,12 @@ import { ImageUpload } from '@/app/components/ImageUpload';
 import RichTextEditor from '@/app/components/RichTextEditor';
 import toast from 'react-hot-toast';
 
+enum SaleType {
+  RETAIL_ONLY = 'RETAIL_ONLY',
+  WHOLESALE_ONLY = 'WHOLESALE_ONLY',
+  BOTH = 'BOTH'
+}
+
 interface Category {
   id: number;
   name: string;
@@ -42,7 +48,8 @@ export default function ProductsPage() {
     priceIsFrom: false,
     imageUrl: '',
     images: [] as string[],
-    categoryId: ''
+    categoryId: '',
+    saleType: 'BOTH'
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -119,7 +126,8 @@ export default function ProductsPage() {
         priceIsFrom: false,
         imageUrl: '',
         images: [],
-        categoryId: ''
+        categoryId: '',
+        saleType: 'BOTH'
       });
       setUploadKey(prev => prev + 1);
       fetchProducts(1); // Go to first page after creating
@@ -263,6 +271,22 @@ export default function ProductsPage() {
                         {category.name}
                       </option>
                     ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="saleType" className="block text-sm font-medium text-gray-700 mb-1">
+                    Тип продажи
+                  </label>
+                  <select
+                    id="saleType"
+                    value={newProduct.saleType}
+                    onChange={(e) => setNewProduct({ ...newProduct, saleType: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"
+                    required
+                  >
+                    <option value={SaleType.RETAIL_ONLY}>Только в розницу</option>
+                    <option value={SaleType.WHOLESALE_ONLY}>Только оптом</option>
+                    <option value={SaleType.BOTH}>Оптом и в розницу</option>
                   </select>
                 </div>
                 <button

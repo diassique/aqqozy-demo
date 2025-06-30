@@ -92,6 +92,7 @@ export async function PUT(
       manufacturer,
       metaTitle,
       metaDescription,
+      saleType,
     } = body;
 
     if (!name || !price || !categoryId) {
@@ -118,6 +119,7 @@ export async function PUT(
       manufacturer,
       metaTitle,
       metaDescription,
+      saleType,
       images
     });
 
