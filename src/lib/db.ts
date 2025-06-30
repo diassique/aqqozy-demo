@@ -258,7 +258,8 @@ export async function getProductsWithCount({
   isNew,
   saleType,
   manufacturer,
-  status
+  status,
+  search
 }: {
   page?: number;
   limit?: number;
@@ -270,11 +271,18 @@ export async function getProductsWithCount({
   saleType?: string;
   manufacturer?: string;
   status?: string;
+  search?: string;
 }) {
   const offset = (page - 1) * limit;
 
   let whereClauses = 'WHERE p.isPublished = TRUE';
   const queryParams: any[] = [];
+
+  if (search && search.trim()) {
+    whereClauses += ' AND (p.name LIKE ? OR p.description LIKE ? OR p.manufacturer LIKE ?)';
+    const searchTerm = `%${search.trim()}%`;
+    queryParams.push(searchTerm, searchTerm, searchTerm);
+  }
 
   if (categorySlug && categorySlug !== 'all') {
     whereClauses += ' AND c.slug = ?';
@@ -374,6 +382,54 @@ export async function getProductsWithCount({
     total,
     totalPages: Math.ceil(total / limit),
   };
+}
+
+// Quick search products function for search suggestions
+export async function searchProducts(query: string, limit = 8): Promise<Product[]> {
+  if (!query || query.trim().length < 2) {
+    return [];
+  }
+
+  const searchTerm = `%${query.trim()}%`;
+  
+  const { rows: products } = await turso.execute({
+    sql: `
+      SELECT p.*, c.name as categoryName, c.id as categoryId, c.slug as categorySlug
+      FROM Product p
+      LEFT JOIN Category c ON p.categoryId = c.id
+      WHERE p.isPublished = TRUE 
+        AND (p.name LIKE ? OR p.description LIKE ? OR p.manufacturer LIKE ?)
+      ORDER BY 
+        CASE 
+          WHEN p.name LIKE ? THEN 1
+          WHEN p.manufacturer LIKE ? THEN 2
+          ELSE 3
+        END,
+        p.createdAt DESC
+      LIMIT ?
+    `,
+    args: [searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, limit]
+  });
+
+  const productsWithImages = [];
+  for (const product of products) {
+    const { rows: images } = await turso.execute({
+      sql: 'SELECT * FROM ProductImage WHERE productId = ? ORDER BY order_num LIMIT 1',
+      args: [product.id]
+    });
+    
+    productsWithImages.push({
+      ...product,
+      images: images as unknown as ProductImage[],
+      category: product.categoryId ? {
+        id: product.categoryId,
+        name: product.categoryName,
+        slug: product.categorySlug
+      } : null
+    });
+  }
+
+  return productsWithImages as unknown as Product[];
 }
 
 export interface ProductCreateData {

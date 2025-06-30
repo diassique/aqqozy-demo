@@ -9,9 +9,7 @@ interface ContactModalProps {
   onClose: () => void;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_VERCEL_URL 
-  ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/api/contact`
-  : '/api/contact';
+const API_URL = '/api/contact';
 
 export const ContactModal = ({ isOpen, onClose }: ContactModalProps) => {
   const [name, setName] = useState('');

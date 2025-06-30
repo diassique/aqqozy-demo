@@ -15,6 +15,7 @@ export async function GET(request: Request) {
     const saleType = searchParams.get('saleType') || undefined;
     const manufacturer = searchParams.get('manufacturer') || undefined;
     const status = searchParams.get('status') || undefined;
+    const search = searchParams.get('search') || undefined;
 
     const result = await getProductsWithCount({
       page,
@@ -27,6 +28,7 @@ export async function GET(request: Request) {
       saleType,
       manufacturer,
       status,
+      search,
     });
     
     return NextResponse.json(result);

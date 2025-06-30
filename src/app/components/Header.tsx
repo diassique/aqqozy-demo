@@ -10,10 +10,6 @@ import { CategoriesMenu } from './CategoriesMenu';
 export const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  
-  const handleSearch = (query: string) => {
-    console.log('Searching for:', query);
-  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -63,7 +59,7 @@ export const Header = () => {
             <Logo className="flex-shrink-0 order-first" />
             
             <div className="flex-grow max-w-2xl hidden sm:block">
-              <SearchInput onSearch={handleSearch} />
+              <SearchInput />
             </div>
             
             <div className="hidden lg:flex items-center gap-6 text-sm font-medium">
@@ -85,7 +81,7 @@ export const Header = () => {
           
           {/* Mobile Search */}
           <div className="sm:hidden mt-4">
-            <SearchInput onSearch={handleSearch} />
+            <SearchInput />
           </div>
         </div>
         

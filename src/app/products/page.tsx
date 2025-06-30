@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { ChevronRight, Grid2X2, List, Filter, X, Loader as LoaderIcon, ChevronDown, Check } from 'lucide-react';
 import { ProductCard } from '@/app/components/ProductCard';
 import { FullPageLoader } from '@/app/components/Loader';
@@ -91,6 +92,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }: { currentPage: nu
 };
 
 export default function ProductsPage() {
+  const searchParams = useSearchParams();
   const [initialLoading, setInitialLoading] = useState<boolean>(true);
   const [productsLoading, setProductsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,6 +113,7 @@ export default function ProductsPage() {
   const [manufacturers, setManufacturers] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState('latest');
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const sortDropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchProducts = useCallback(async (page: number, isInitialLoad = false) => {
@@ -143,6 +146,11 @@ export default function ProductsPage() {
       if (selectedStatus !== 'all') {
         params.append('status', selectedStatus);
       }
+      
+      if (searchQuery.trim()) {
+        params.append('search', searchQuery.trim());
+      }
+      
       const res = await fetch(`/api/admin/products?${params.toString()}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка при загрузке товаров');
@@ -159,7 +167,21 @@ export default function ProductsPage() {
       }
       setProductsLoading(false);
     }
-  }, [selectedCategory, priceRange, isNewOnly, selectedSaleType, selectedManufacturer, selectedStatus, sortBy]);
+  }, [selectedCategory, priceRange, isNewOnly, selectedSaleType, selectedManufacturer, selectedStatus, sortBy, searchQuery]);
+
+  // Effect to handle URL parameters
+  useEffect(() => {
+    const urlSearchQuery = searchParams.get('search');
+    const urlCategory = searchParams.get('category');
+    
+    if (urlSearchQuery) {
+      setSearchQuery(urlSearchQuery);
+    }
+    
+    if (urlCategory) {
+      setSelectedCategory(urlCategory);
+    }
+  }, [searchParams]);
 
   // Effect for initial category loading and first product fetch
   useEffect(() => {
@@ -201,7 +223,7 @@ export default function ProductsPage() {
         fetchProducts(1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCategory, priceRange, isNewOnly, selectedSaleType, selectedManufacturer, selectedStatus, sortBy]);
+  }, [selectedCategory, priceRange, isNewOnly, selectedSaleType, selectedManufacturer, selectedStatus, sortBy, searchQuery]);
   
   // Effect for refetching when page changes
   useEffect(() => {
@@ -261,6 +283,32 @@ export default function ProductsPage() {
           <ChevronRight className="w-4 h-4 mx-2" />
           <span className="text-gray-900">Каталог</span>
         </div>
+        
+        {/* Search Results Header */}
+        {searchQuery && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Результаты поиска для "{searchQuery}"
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Найдено товаров: {totalProducts}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  window.history.pushState({}, '', '/products');
+                }}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+                title="Очистить поиск"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Mobile Filter Toggle Button */}
         <div className="lg:hidden flex justify-between items-center mb-4">
